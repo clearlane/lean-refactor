@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install checks
+        run: sudo apt-get update && sudo apt-get install -y jq shellcheck shfmt
+
+      - name: Check shell syntax
+        run: bash -n scripts/*.sh
+
+      - name: Run ShellCheck
+        run: shellcheck -S warning scripts/*.sh
+
+      - name: Check shell formatting
+        run: shfmt -d -i 2 -ci scripts/*.sh
+
+      - name: Run lifecycle self-check
+        run: bash scripts/lifecycle-self-check.sh
+
+      - name: Scan live sources for stale identity
+        run: |
+          if grep -RInE 'compound-refactor|compound_refactor|COMPOUND_REFACTOR' \
+            --exclude-dir=.git \
+            --exclude-dir=.agents \
+            --exclude-dir=.omo \
+            --exclude='*.local.md' \
+            --exclude='*.tmp.*' \
+            --exclude='*.bak.*' \
+            --exclude='*.failure' \
+            SKILL.md README.md SECURITY.md references scripts skills-lock.json; then
+            echo 'Stale compound-refactor identity found in live sources' >&2
+            exit 1
+          fi

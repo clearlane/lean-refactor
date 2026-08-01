@@ -1,0 +1,28 @@
+.DS_Store
+**/.DS_Store
+
+# Local agent state and bundled development material
+.agents/
+.omo/
+.claude/lean-refactor.*.local.md
+
+# CodeGraph indexes and databases
+.codegraph/
+**/.codegraph/
+*.codegraph
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+
+# Generated and rollback artifacts
+*.tmp.*
+*.bak.*
+*.failure
+**/rollback/**/.git
+**/.git
+
+# Python generated files
+__pycache__/
+*.py[cod]
+*$py.class
