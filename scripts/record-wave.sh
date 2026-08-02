@@ -51,8 +51,8 @@ previous=$(printf '%s' "$previous" | tr '[:upper:]' '[:lower:]')
   echo "Error: manifest changed since approval" >&2
   exit 1
 }
-validate_approval "$state" || {
-  echo "Error: approval is stale or invalid" >&2
+validate_approval_envelope "$state" || {
+  echo "Error: approval envelope is invalid" >&2
   exit 1
 }
 next_state="${state}.tmp.$$"

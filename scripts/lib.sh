@@ -182,8 +182,8 @@ approval_digest_for_state() {
   canonical_digest "$(parse_field "$file" session_id)" "$(parse_field "$file" scope_path)" "$(parse_field "$file" audit_file)" "$(parse_field "$file" approved_findings)" "$(parse_field "$file" approved_tier)" "$(parse_field "$file" approval_exclusions)" "$(parse_field "$file" approval_recorded_at)" "$(parse_field "$file" repository_fingerprint)" "$(parse_field "$file" baseline_result_hash)" "$(parse_field "$file" reference_inventory_hash)" "$(parse_field "$file" evidence_hash)" "$(parse_field "$file" classification_hash)" "$(parse_field "$file" boundary_diff_hash)" "$(parse_field "$file" state_impact_hash)" "$(parse_field "$file" external_impact_hash)"
 }
 
-validate_approval() {
-  local file="$1" key expected root mode
+validate_approval_envelope() {
+  local file="$1" key expected
   validate_state "$file" || return 1
   [[ "$(parse_field "$file" approval_status)" == approved ]] || return 1
   for key in audit_file audit_hash approval_digest approval_recorded_at approved_findings approved_tier repository_fingerprint baseline_result_artifact baseline_result_hash reference_inventory_artifact reference_inventory_hash evidence_artifact evidence_hash classification_artifact classification_hash boundary_diff_artifact boundary_diff_hash state_impact_artifact state_impact_hash external_impact_artifact external_impact_hash; do [[ -n "$(parse_field "$file" "$key")" ]] || return 1; done
@@ -195,11 +195,16 @@ validate_approval() {
   validate_artifact "$file" boundary_diff_artifact boundary_diff_hash || return 1
   validate_artifact "$file" state_impact_artifact state_impact_hash || return 1
   validate_artifact "$file" external_impact_artifact external_impact_hash || return 1
-  root=$(parse_field "$file" root_path)
-  mode=$(parse_field "$file" mode)
-  [[ "$(repository_fingerprint "$root" "$mode" "$(parse_field "$file" audit_file)")" == "$(parse_field "$file" repository_fingerprint)" ]] || return 1
   expected=$(approval_digest_for_state "$file") || return 1
   [[ "$expected" == "$(parse_field "$file" approval_digest)" ]]
+}
+
+validate_approval() {
+  local file="$1" root mode
+  validate_approval_envelope "$file" || return 1
+  root=$(parse_field "$file" root_path)
+  mode=$(parse_field "$file" mode)
+  [[ "$(repository_fingerprint "$root" "$mode" "$(parse_field "$file" audit_file)")" == "$(parse_field "$file" repository_fingerprint)" ]]
 }
 
 revoke_approval() {
@@ -247,7 +252,7 @@ validate_terminal_audit() {
   [[ -n "$current" && "$current" == "$(parse_field "$file" current_signature)" ]] || return 1
   approval_required=$(audit_field "$audit" approval_required)
   [[ "$approval_required" =~ ^(yes|no)$ ]] || return 1
-  [[ "$approval_required" == no ]] || validate_approval "$file" || return 1
+  [[ "$approval_required" == no ]] || validate_approval_envelope "$file" || return 1
   if [[ "$marker" == complete ]]; then
     [[ "$(audit_field "$audit" repair_ready_count)" == 0 ]] || return 1
   else

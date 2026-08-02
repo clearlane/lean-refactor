@@ -21,12 +21,15 @@ done
   --external-impact "$tmp/external-impact" --wave-manifest "$tmp/wave" >/dev/null
 [[ "$(parse_field "$state" expected_wave_status)" == pending ]]
 if validate_wave "$state"; then exit 1; fi
+printf 'repaired\n' >"$root/source.txt"
+if validate_approval "$state"; then exit 1; fi
+validate_approval_envelope "$state"
 signature=$(printf 'F1' | sha256_stream)
 "$SCRIPT_DIR/record-wave.sh" "$state" "$audit" --manifest "$tmp/wave" \
   --current-signature "$signature" --repair-ready-count 0 --approval-required no >/dev/null
 [[ "$(parse_field "$state" expected_wave_status)" == complete ]]
 validate_wave "$state"
-validate_approval "$state"
+validate_approval_envelope "$state"
 validate_terminal_audit "$state" complete
 printf '\ncompound_approval_required: invalid\n' >>"$audit"
 update_field "$state" audit_hash "$(sha256_file "$audit")"

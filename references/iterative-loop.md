@@ -25,7 +25,7 @@ scripts/record-approval.sh <STATE> <AUDIT> --findings IDS --tier N [--exclude ID
   --external-impact FILE --wave-manifest FILE
 ```
 
-Producer requires absolute existing artifact paths, records their SHA-256 hashes, captures live repository fingerprint, and atomically replaces state only after full validation. It records the expected wave as `pending`. Git fingerprint binds HEAD, index tree, tracked binary diff, and path/content hashes of untracked files; code-only mode binds sorted path/content hashes. `validate_approval` recomputes all immutable approval sources. Approval binds the audit path but not mutable audit content/hash; execution-log and machine-field appends therefore preserve approval, while any approval-bound artifact or repository change makes it stale. `sha256sum` is preferred; `shasum -a 256` is fallback.
+Producer requires absolute existing artifact paths, records their SHA-256 hashes, captures live repository fingerprint, and atomically replaces state only after full validation. It records the expected wave as `pending`. Git fingerprint binds HEAD, index tree, tracked binary diff, and path/content hashes of untracked files; code-only mode binds sorted path/content hashes. Immediately before mutation, `validate_approval` recomputes the immutable approval sources and requires the live repository fingerprint to match. After an approved repair changes the repository, finalization uses `validate_approval_envelope`: it still verifies approval status, digest, audit path, and every approval-bound artifact hash, but does not mistake the expected repair diff for stale pre-mutation approval. Approval binds the audit path but not mutable audit content/hash. `sha256sum` is preferred; `shasum -a 256` is fallback.
 
 ## Wave finalization
 
@@ -35,7 +35,7 @@ scripts/record-wave.sh <STATE> <AUDIT> --manifest FILE \
   --repair-ready-count N --approval-required yes|no
 ```
 
-Finalize only after repair and verification complete. Command requires pending state, unchanged approved manifest, and fresh approval; then atomically appends canonical machine fields and marks wave complete. Machine fields use exact `compound_<key>:` names. Records are append-only; parser uses last exact occurrence. No manual state edits are supported.
+Finalize only after repair and verification complete. Command requires pending state, unchanged approved manifest, and a valid immutable approval envelope; live repository freshness was consumed at the pre-mutation gate and is expected to differ after repair. It then atomically appends canonical machine fields and marks wave complete. Machine fields use exact `compound_<key>:` names. Records are append-only; parser uses last exact occurrence. No manual state edits are supported.
 
 ## Stop hook
 
