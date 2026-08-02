@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/lib.sh"
+source "$SCRIPT_DIR/state.sh"
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 root="$tmp/repo"
@@ -105,17 +105,17 @@ signature=$(printf 'F1' | sha256_stream)
 validate_wave "$state"
 validate_approval_envelope "$state"
 validate_terminal_audit "$state" complete
-printf '\ncompound_approval_required: invalid\n' >>"$audit"
+printf '\nlean_approval_required: invalid\n' >>"$audit"
 update_field "$state" audit_hash "$(sha256_file "$audit")"
 if validate_terminal_audit "$state" complete; then exit 1; fi
-printf '\ncompound_approval_required: no\ncompound_current_signature: %s\ncompound_previous_signature: %s\n' "$signature" "$signature" >>"$audit"
+printf '\nlean_approval_required: no\nlean_current_signature: %s\nlean_previous_signature: %s\n' "$signature" "$signature" >>"$audit"
 update_field "$state" previous_signature "$signature"
 update_field "$state" audit_hash "$(sha256_file "$audit")"
 validate_terminal_audit "$state" stuck
-printf '\ncompound_approval_required:\n' >>"$audit"
+printf '\nlean_approval_required:\n' >>"$audit"
 update_field "$state" audit_hash "$(sha256_file "$audit")"
 if validate_terminal_audit "$state" stuck; then exit 1; fi
-printf '\ncompound_approval_required: yes\n' >>"$audit"
+printf '\nlean_approval_required: yes\n' >>"$audit"
 update_field "$state" audit_hash "$(sha256_file "$audit")"
 update_field "$state" approval_status pending
 if validate_terminal_audit "$state" stuck; then exit 1; fi
@@ -188,4 +188,4 @@ if "$SCRIPT_DIR/workflow.sh" cancel --root "$cancel_root" >/dev/null 2>&1; then 
 rmdir "${cancel_state}.lock"
 "$SCRIPT_DIR/workflow.sh" cancel --root "$cancel_root" >/dev/null
 [[ ! -e "$cancel_state" ]]
-printf 'Lifecycle self-check: PASS\n'
+printf 'Lifecycle smoke check: PASS\n'

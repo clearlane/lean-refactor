@@ -10,7 +10,11 @@ Don't use it for single-file cleanup, one-function bug fixes, new features, or c
 - `jq`
 - An agent runtime with skill discovery, bounded worker delegation, and local command execution
 
-Missing specialist capabilities have documented fallbacks in [`SKILL.md`](SKILL.md). Discovery can use general-purpose workers with prompts from `references/discovery-agent-prompts.md`. Git, worktree, review, planning, and pattern write-up steps can use native tools or the listed manual paths.
+Optional discovery accelerators are CodeGraph, `scc`, `jscpd`/`cpd`, and `ast-grep`. The skill feature-detects them; they are not required for correctness or resumability.
+
+Development checks additionally use Bats and `check-jsonschema`. Runtime paths retain portable smoke-test and `jq` validation fallbacks; CI sets `LEAN_REFACTOR_STRICT_SCHEMA=1` to run full JSON Schema validation. Set `LEAN_REFACTOR_USE_YQ=1` to opt into structural YAML front-matter reads and updates when `yq` is available.
+
+Missing specialist capabilities have documented fallbacks in [`SKILL.md`](SKILL.md). Discovery can use general-purpose workers with prompts from `references/worker-discovery.md`. Git, worktree, review, planning, and pattern write-up steps can use native tools or the listed manual paths.
 
 ## Install
 
@@ -38,7 +42,17 @@ For iterative runs, use the coordinator entrypoint:
 scripts/workflow.sh init [SCOPE] [--max-iterations N] [--tier-floor 1|2|3|4] [--code-only]
 ```
 
-The coordinator writes local state, a discovery-checkpoint ledger, and a per-boundary ledger. Use its `discovery`, `approve`, `verify-approval`, `boundary`, `finalize`, `conclude-discovery`, `status`, and `cancel` commands for transitions. `conclude-discovery` is the zero-findings convergence path. Initialization doesn't register the continuation adapter; when the host supports stop hooks, register the absolute path to `scripts/stop-hook.sh` and pass its documented JSON input. Without that adapter, runs are single-turn and must not claim automatic continuation.
+The coordinator writes local state, a discovery-checkpoint ledger, and a per-boundary ledger. Use its `discovery`, `approve`, `verify-approval`, `boundary`, `finalize`, `conclude-discovery`, `status`, and `cancel` commands for transitions. `conclude-discovery` is the zero-findings convergence path. Initialization doesn't register the continuation adapter; when the host supports stop hooks, register the absolute path to `scripts/event-stop.sh` and pass its documented JSON input. Without that adapter, runs are single-turn and must not claim automatic continuation.
+
+Before layer discovery, create a compact deterministic repository frame:
+
+```sh
+scripts/repo-frame.sh . --output /tmp/repo-frame.json
+```
+
+Use `--run-cpd` to include a compact clone-candidate report when `jscpd`/`cpd` is installed.
+
+The frame reuses a ready CodeGraph index and records any available `scc`, CPD, and `ast-grep` implementations. Pass `--init-codegraph` only when creating or updating the local `.codegraph/` index is explicitly intended.
 
 ## Vendored skill pinning
 
@@ -53,8 +67,10 @@ The skill requires a trusted checkout and explicit scope. It checks repository s
 ```sh
 bash -n scripts/*.sh
 shellcheck -S warning scripts/*.sh
-shfmt -d -i 2 -ci scripts/*.sh
-bash scripts/lifecycle-self-check.sh
+shfmt -d -i 2 -ci scripts/*.sh tests/*.bats
+bash scripts/names.sh
+bash scripts/lifecycle-check.sh
+check-jsonschema --schemafile schemas/repo-frame.schema.json /tmp/repo-frame.json
 ```
 
 ## License

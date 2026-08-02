@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# stage-findings.sh — concatenate parallel agent reports into one file.
+# findings-stage.sh — concatenate parallel agent reports into one file.
 #
 # Usage:
-#   stage-findings.sh <findings-dir>
+#   findings-stage.sh <findings-dir>
 #
 # Where findings-dir contains one .md file per agent report (any pre-existing
 # master.md is skipped). Output is findings-dir/master.md: an index plus each
@@ -64,4 +64,4 @@ fi
 } >"$out"
 
 echo "Wrote $out"
-echo "Next: dedupe across reports and rank into tiers per references/ranking-rubric.md"
+echo "Next: dedupe across reports and rank into tiers per references/ranking.md"

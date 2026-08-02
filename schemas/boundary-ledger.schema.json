@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lean-refactor.local/schemas/boundary-ledger.schema.json",
+  "title": "Lean Refactor Boundary Ledger",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "session_id", "boundaries"],
+  "properties": {
+    "schema_version": { "const": 2 },
+    "session_id": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+    "boundaries": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[A-Za-z0-9._-]+$" },
+      "additionalProperties": { "$ref": "#/$defs/boundary" }
+    }
+  },
+  "$defs": {
+    "history": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "result", "attempt", "manifest", "manifest_hash", "recorded_at"],
+      "properties": {
+        "kind": { "enum": ["repair", "verification"] },
+        "result": { "enum": ["completed", "retryable", "failed", "blocked"] },
+        "attempt": { "type": "integer", "minimum": 1 },
+        "manifest": { "type": "string", "pattern": "^/" },
+        "manifest_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "recorded_at": { "type": "string", "minLength": 1 }
+      }
+    },
+    "boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status", "repair_attempts", "verification_failures", "repair_limit",
+        "verification_limit", "repair_status", "verification_status", "last_result",
+        "last_manifest", "last_manifest_hash", "recorded_at", "history"
+      ],
+      "properties": {
+        "status": { "enum": ["pending", "completed", "blocked"] },
+        "repair_attempts": { "type": "integer", "minimum": 0 },
+        "verification_failures": { "type": "integer", "minimum": 0 },
+        "repair_limit": { "type": "integer", "minimum": 1 },
+        "verification_limit": { "type": "integer", "minimum": 1 },
+        "repair_status": { "enum": ["pending", "completed", "blocked"] },
+        "verification_status": { "enum": ["pending", "completed", "blocked"] },
+        "last_result": { "type": "string" },
+        "last_manifest": { "type": "string" },
+        "last_manifest_hash": { "type": "string" },
+        "recorded_at": { "type": "string" },
+        "history": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/history" }
+        }
+      }
+    }
+  }
+}

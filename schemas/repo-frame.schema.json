@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lean-refactor.local/schemas/repo-frame.schema.json",
+  "title": "Lean Refactor Repository Frame",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "root", "generated_at", "tools", "inventory", "codegraph"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "root": { "type": "string", "pattern": "^/" },
+    "generated_at": { "type": "string", "minLength": 1 },
+    "tools": { "type": "object" },
+    "inventory": {
+      "type": "object",
+      "required": ["file_count", "files", "scc", "cpd"],
+      "properties": {
+        "file_count": { "type": "integer", "minimum": 0 },
+        "files": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "scc": {},
+        "cpd": {
+          "type": "object",
+          "required": ["tool", "executed", "command", "report"],
+          "properties": {
+            "tool": { "type": "string" },
+            "executed": { "type": "boolean" },
+            "command": { "type": "string" },
+            "report": {}
+          }
+        }
+      }
+    },
+    "codegraph": {
+      "type": "object",
+      "required": ["state", "status", "files", "guidance"],
+      "properties": {
+        "state": { "enum": ["unavailable", "not-initialized", "stale", "ready"] },
+        "status": { "type": "object" },
+        "files": { "type": "array" },
+        "guidance": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

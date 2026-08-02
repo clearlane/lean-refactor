@@ -1,8 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/lib.sh"
-usage() { echo "Usage: record-approval.sh <STATE> <AUDIT> --approver ID [--conditions TEXT] --findings IDS --tier N [--exclude IDS] --baseline-result FILE --reference-inventory FILE --evidence FILE --classification FILE --boundary-diff FILE --state-impact FILE --external-impact FILE --wave-manifest FILE" >&2; }
+source "$SCRIPT_DIR/state.sh"
+usage() { echo "Usage: approval-record.sh <STATE> <AUDIT> --approver ID [--conditions TEXT] --findings IDS --tier N [--exclude IDS] --baseline-result FILE --reference-inventory FILE --evidence FILE --classification FILE --boundary-diff FILE --state-impact FILE --external-impact FILE --wave-manifest FILE" >&2; }
 [[ $# -ge 2 ]] || {
   usage
   exit 64
@@ -114,7 +114,7 @@ update_field "$next" phase approved
 update_field "$next" approval_digest "$(approval_digest_for_state "$next")"
 cp "$ledger" "$backup_ledger"
 mv "$next_ledger" "$ledger"
-COMPOUND_STATE_CANONICAL_PATH="$state" validate_approval "$next" || {
+LEAN_STATE_CANONICAL_PATH="$state" validate_approval "$next" || {
   mv "$backup_ledger" "$ledger"
   echo "Error: approval failed live validation; original state preserved" >&2
   exit 1

@@ -1,8 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/lib.sh"
-usage() { echo "Usage: record-wave.sh <STATE> <AUDIT> --manifest FILE --current-signature SHA256 [--previous-signature SHA256] --repair-ready-count N --approval-required yes|no" >&2; }
+source "$SCRIPT_DIR/state.sh"
+usage() { echo "Usage: wave-record.sh <STATE> <AUDIT> --manifest FILE --current-signature SHA256 [--previous-signature SHA256] --repair-ready-count N --approval-required yes|no" >&2; }
 [[ $# -ge 2 ]] || {
   usage
   exit 64
@@ -79,21 +79,21 @@ trap 'rm -f "$next_state" "$next_audit" "$backup_audit"; release_state_lock' EXI
 cp "$state" "$next_state"
 cp "$audit" "$next_audit"
 {
-  printf '\ncompound_iteration: %s\n' "$(parse_field "$state" iteration)"
-  printf 'compound_repair_ready_count: %s\n' "$ready"
-  printf 'compound_verification: complete\n'
-  printf 'compound_approval_required: %s\n' "$approval_required"
-  printf 'compound_current_signature: %s\n' "$current"
-  printf 'compound_previous_signature: %s\n' "$previous"
-  printf 'compound_expected_wave_status: complete\n'
-  printf 'compound_expected_wave_manifest_hash: %s\n' "$(sha256_file "$manifest")"
+  printf '\nlean_iteration: %s\n' "$(parse_field "$state" iteration)"
+  printf 'lean_repair_ready_count: %s\n' "$ready"
+  printf 'lean_verification: complete\n'
+  printf 'lean_approval_required: %s\n' "$approval_required"
+  printf 'lean_current_signature: %s\n' "$current"
+  printf 'lean_previous_signature: %s\n' "$previous"
+  printf 'lean_expected_wave_status: complete\n'
+  printf 'lean_expected_wave_manifest_hash: %s\n' "$(sha256_file "$manifest")"
 } >>"$next_audit"
 update_field "$next_state" current_signature "$current"
 update_field "$next_state" previous_signature "$previous"
 update_field "$next_state" expected_wave_status complete
 update_field "$next_state" phase rediscovery
 update_field "$next_state" audit_hash "$(sha256_file "$next_audit")"
-COMPOUND_STATE_CANONICAL_PATH="$state" validate_state "$next_state" || {
+LEAN_STATE_CANONICAL_PATH="$state" validate_state "$next_state" || {
   echo "Error: finalized state failed validation" >&2
   exit 1
 }

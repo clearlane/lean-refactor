@@ -27,20 +27,20 @@ EOF
 command_name="$1"
 shift
 case "$command_name" in
-  init) exec "$SCRIPT_DIR/setup-loop.sh" "$@" ;;
-  discovery) exec "$SCRIPT_DIR/record-discovery-stage.sh" "$@" ;;
-  approve) exec "$SCRIPT_DIR/record-approval.sh" "$@" ;;
-  verify-approval) exec "$SCRIPT_DIR/verify-approval.sh" "$@" ;;
-  boundary) exec "$SCRIPT_DIR/record-boundary-result.sh" "$@" ;;
-  finalize) exec "$SCRIPT_DIR/record-wave.sh" "$@" ;;
-  conclude-discovery) exec "$SCRIPT_DIR/conclude-discovery.sh" "$@" ;;
-  advance) exec "$SCRIPT_DIR/advance-loop.sh" "$@" ;;
+  init) exec "$SCRIPT_DIR/loop-setup.sh" "$@" ;;
+  discovery) exec "$SCRIPT_DIR/discovery-record.sh" "$@" ;;
+  approve) exec "$SCRIPT_DIR/approval-record.sh" "$@" ;;
+  verify-approval) exec "$SCRIPT_DIR/approval-verify.sh" "$@" ;;
+  boundary) exec "$SCRIPT_DIR/boundary-record.sh" "$@" ;;
+  finalize) exec "$SCRIPT_DIR/wave-record.sh" "$@" ;;
+  conclude-discovery) exec "$SCRIPT_DIR/discovery-conclude.sh" "$@" ;;
+  advance) exec "$SCRIPT_DIR/loop-advance.sh" "$@" ;;
   status)
     [[ $# -eq 1 ]] || {
       usage
       exit 64
     }
-    source "$SCRIPT_DIR/lib.sh"
+    source "$SCRIPT_DIR/state.sh"
     validate_state "$1" || {
       echo "Error: invalid state: $1" >&2
       exit 1
@@ -50,7 +50,7 @@ case "$command_name" in
       "$(parse_field "$1" iteration)" "$(parse_field "$1" approval_status)" \
       "$1" "$(parse_field "$1" boundary_ledger)"
     ;;
-  cancel) exec "$SCRIPT_DIR/cancel-loop.sh" "$@" ;;
+  cancel) exec "$SCRIPT_DIR/loop-cancel.sh" "$@" ;;
   *)
     usage
     exit 64

@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lean-refactor.local/schemas/discovery-ledger.schema.json",
+  "title": "Lean Refactor Discovery Ledger",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "session_id", "iterations"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "session_id": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+    "iterations": {
+      "type": "object",
+      "patternProperties": {
+        "^[1-9][0-9]*$": { "$ref": "#/$defs/iteration" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "$defs": {
+    "checkpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "artifact", "artifact_hash", "recorded_at"],
+      "properties": {
+        "status": { "enum": ["pending", "completed"] },
+        "artifact": { "type": "string" },
+        "artifact_hash": { "type": "string" },
+        "recorded_at": { "type": "string" }
+      }
+    },
+    "iteration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["prior_art", "layers", "synthesis", "audit"],
+      "properties": {
+        "prior_art": { "$ref": "#/$defs/checkpoint" },
+        "layers": { "$ref": "#/$defs/checkpoint" },
+        "synthesis": { "$ref": "#/$defs/checkpoint" },
+        "audit": { "$ref": "#/$defs/checkpoint" }
+      }
+    }
+  }
+}

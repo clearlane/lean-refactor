@@ -1,9 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/lib.sh"
+source "$SCRIPT_DIR/state.sh"
 
-usage() { echo "Usage: record-discovery-stage.sh <STATE> --stage prior-art|layers|synthesis|audit --artifact FILE" >&2; }
+usage() { echo "Usage: discovery-record.sh <STATE> --stage prior-art|layers|synthesis|audit --artifact FILE" >&2; }
 [[ $# -ge 1 ]] || {
   usage
   exit 64
@@ -92,7 +92,7 @@ update_field "$next_state" discovery_ledger_hash "$(sha256_file "$next_ledger")"
 update_field "$next_state" phase "$phase"
 cp "$ledger" "$backup_ledger"
 mv "$next_ledger" "$ledger"
-COMPOUND_STATE_CANONICAL_PATH="$state" validate_discovery_ledger "$next_state" || {
+LEAN_STATE_CANONICAL_PATH="$state" validate_discovery_ledger "$next_state" || {
   mv "$backup_ledger" "$ledger"
   echo "Error: discovery checkpoint failed validation" >&2
   exit 1

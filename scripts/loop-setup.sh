@@ -2,8 +2,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=lib.sh disable=SC1091
-source "$SCRIPT_DIR/lib.sh"
+# shellcheck source=state.sh disable=SC1091
+source "$SCRIPT_DIR/state.sh"
 
 command -v jq >/dev/null 2>&1 || {
   echo "Error: jq is required on PATH." >&2

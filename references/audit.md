@@ -173,23 +173,23 @@ Findings that require larger structural decisions or design discussion. Each ent
 
 ## Machine lifecycle records
 
-Append records only through `scripts/workflow.sh finalize`. Never rewrite older records. Parser accepts exact `compound_<key>:` names and uses last exact duplicate.
+Append records only through `scripts/workflow.sh finalize`. Never rewrite older records. Parser accepts exact `lean_<key>:` names and uses last exact duplicate.
 
 ```text
-compound_iteration: <current integer>
-compound_repair_ready_count: <integer>
-compound_verification: complete
-compound_approval_required: yes|no
-compound_current_signature: <stable SHA-256>
-compound_previous_signature: <stable SHA-256 or empty>
-compound_expected_wave_status: complete
-compound_expected_wave_manifest_hash: <current manifest SHA-256>
+lean_iteration: <current integer>
+lean_repair_ready_count: <integer>
+lean_verification: complete
+lean_approval_required: yes|no
+lean_current_signature: <stable SHA-256>
+lean_previous_signature: <stable SHA-256 or empty>
+lean_expected_wave_status: complete
+lean_expected_wave_manifest_hash: <current manifest SHA-256>
 ```
 
 ## Iteration N — finding signature
 
 Sorted normalized IDs of every finding discovered this iteration, one per line.
-Normalized ID format (from `iterative-loop.md`): `<relative-path>:<primary-symbol-or-literal>:<finding-kind>`,
+Normalized ID format (from `workflow.md`): `<relative-path>:<primary-symbol-or-literal>:<finding-kind>`,
 lowercased, no line numbers. Append a new section per iteration; never rewrite an
 earlier one — the previous section is the only surviving record of the prior
 iteration once context resets.

@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lean-refactor.local/schemas/boundary-manifest.schema.json",
+  "title": "Lean Refactor Boundary Result Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "boundary_id", "attempt", "result", "branch_worktree",
+    "base_fingerprint", "diff_fingerprint", "allowed_paths", "changed_paths",
+    "commands", "evidence_artifacts", "blocker", "stale_dependents"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "boundary_id": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+    "attempt": { "type": "integer", "minimum": 1 },
+    "result": { "enum": ["completed", "retryable", "failed", "blocked"] },
+    "branch_worktree": { "type": "string", "minLength": 1 },
+    "base_fingerprint": { "type": "string", "minLength": 1 },
+    "diff_fingerprint": { "type": "string", "minLength": 1 },
+    "allowed_paths": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/relativePath" }
+    },
+    "changed_paths": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/relativePath" }
+    },
+    "commands": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["command", "exit_code", "evidence"],
+        "properties": {
+          "command": { "type": "string", "minLength": 1 },
+          "exit_code": { "type": "integer" },
+          "evidence": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "evidence_artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256"],
+        "properties": {
+          "path": { "type": "string", "pattern": "^/" },
+          "sha256": { "type": "string", "pattern": "^[0-9a-fA-F]{64}$" }
+        }
+      }
+    },
+    "blocker": { "type": "string" },
+    "stale_dependents": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" }
+    }
+  },
+  "$defs": {
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "not": { "pattern": "(^/|(^|/)\\.\\.?(/|$)|//)" }
+    }
+  }
+}

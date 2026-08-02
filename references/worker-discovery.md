@@ -36,12 +36,15 @@ Prepend to every layer prompt:
 ```text
 SCOPE_ROOT: {{SCOPE_ROOT}}
 LAYER_PATHS: {{LAYER_PATHS}}
+REPO_FRAME_ARTIFACT: {{REPO_FRAME_ARTIFACT_OR_NONE}}
 PRIOR_ART_BRIEF:
 {{PRIOR_ART_BRIEF}}
 
 Follow canonical workflow and Hard-Cut Policy in SKILL.md. Do not restate or weaken them.
 
 Scan exhaustively; no top-N or word cap. Read complete relevant files. Enumerate complete reference surfaces required by SKILL.md, including dynamic/indirect references and persisted identifiers/stores. Do not infer completeness from a sample; an unqueryable relevant store is `blocked`.
+
+If a repository-frame artifact exists, use it to route work before reading files. Prefer ready CodeGraph JSON queries for supported symbol/call/impact surfaces, CPD for clone candidates, `scc` for inventory, and `ast-grep` for structural searches. Record every invoked command and version. These accelerators never prove semantic equivalence or complete persisted/external-state coverage; use `rg` and domain-native store queries as required.
 
 For every search, record reproducible provenance:
 - exact command/query or tool query
@@ -87,7 +90,7 @@ Treat framework-specific patterns only as examples. Report only evidence-backed 
 SCOPE_ROOT: {{SCOPE_ROOT}}
 INPUT_REPORTS: {{REPORT_PATHS_OR_FULL_REPORTS}}
 
-All layer scans are complete. Follow SKILL.md Phase 3 and references/ranking-rubric.md. Do not search only for a presentation top-N and do not discard long-tail findings.
+All layer scans are complete. Follow SKILL.md Phase 3 and references/ranking.md. Do not search only for a presentation top-N and do not discard long-tail findings.
 
 Merge complete reference surfaces, deduplicate by semantic source and affected sites, and reconcile conflicts by recording source reports, disagreement, decision, and supporting evidence; unresolved conflicts remain suspected/blocked. Require semantic equivalence and justify every score component/tier. Flag shared-file boundaries. Produce exhaustive ranked findings and full provenance for audit persistence, or complete inline audit when SKILL.md selected read-only discovery.
 ```

@@ -1,6 +1,6 @@
 # Methodology — Worked Walkthrough
 
-Detailed execution guide. Safety and evidence invariants live in `../SKILL.md`; executable transitions live in `../scripts/workflow.sh` and `iterative-loop.md`.
+Detailed execution guide. Safety and evidence invariants live in `../SKILL.md`; executable transitions live in `../scripts/workflow.sh` and `workflow.md`.
 
 ## 1. Frame and establish evidence
 
@@ -12,20 +12,33 @@ Example scope map:
 - infrastructure: registries and helpers
 - contracts: templates, schemas, assets
 
+Generate a compact deterministic frame before layer dispatch when useful:
+
+```text
+scripts/repo-frame.sh SCOPE --output /absolute/path/repo-frame.json
+```
+
+Add `--run-cpd` when clone-candidate generation is appropriate; tune `--cpd-min-lines` and `--cpd-min-tokens` for the scope. The normalized artifact records whether CPD ran and the exact effective command shape.
+
+The adapter always records available tool versions and a compact file/language inventory. It reuses a ready CodeGraph index but marks an index with pending changes or a recommended rebuild as `stale`; it does not create or update `.codegraph/` unless `--init-codegraph` is explicitly authorized. For supported languages, use CodeGraph `query`, `callers`, `callees`, `impact`, and `affected` JSON output to reduce file crawling. CodeGraph is not complete evidence for unsupported languages, configuration, serialized identifiers, external state, or dynamic surfaces outside its graph.
+
+Use `scc` output for language/LOC/generated-code framing, CPD output for syntactic clone candidates, and `ast-grep` for structural searches when available. Accelerator results remain candidate evidence; semantic equivalence, canonicality, persisted-state coverage, and hard-cut safety still require the canonical evidence procedure.
+
 ## 2. Discover in correct order
 
 1. Run blocking prior-art pass.
-2. Dispatch independent layer scans in one parallel batch using `discovery-agent-prompts.md`.
-3. Wait for every report.
-4. Run cross-cutting synthesis later over complete reports.
+2. Generate or load the deterministic repository frame and pass its artifact path to every layer scan.
+3. Dispatch independent layer scans in one parallel batch using `worker-discovery.md`.
+4. Wait for every report.
+5. Run cross-cutting synthesis later over complete reports.
 
-Record the prior-art, complete aggregate layer-report, synthesis, and persisted audit artifacts through `workflow.sh discovery`. The coordinator rejects missing or out-of-order checkpoints. Use host-native specialists matching the capability roles in `discovery-agent-prompts.md`; when unavailable, use a bounded general-purpose worker with the same contract. Use the host's bounded parallel primitive for independent layer scans and completion notifications for longer work.
+Record the prior-art, complete aggregate layer-report, synthesis, and persisted audit artifacts through `workflow.sh discovery`. The coordinator rejects missing or out-of-order checkpoints. Use host-native specialists matching the capability roles in `worker-discovery.md`; when unavailable, use a bounded general-purpose worker with the same contract. Use the host's bounded parallel primitive for independent layer scans and completion notifications for longer work.
 
 Layer reports preserve full provenance/raw artifacts, complete dynamic/indirect and persisted-store surfaces, canonical `confirmed|suspected|blocked` evidence, and semantic-equivalence analysis. Synthesis records conflict reconciliation and score justifications; it never races scans it consumes.
 
 ## 3. Rank and persist
 
-Deduplicate confirmed findings, flag overlapping files, score using `ranking-rubric.md`, then create audit from `audit-file-template.md`. Persist exhaustive findings before showing abbreviated summary.
+Deduplicate confirmed findings, flag overlapping files, score using `ranking.md`, then create audit from `audit.md`. Persist exhaustive findings before showing abbreviated summary.
 
 Example:
 
@@ -46,7 +59,7 @@ Group non-conflicting findings by atomic boundary. In Git mode, create named bra
 
 Split oversized boundaries by a real dependency graph when they exceed roughly ten files, five distinct subtasks, or 500 changed lines. Start non-conflicting boundaries together through bounded parallel delegation; shared-file boundaries run sequentially after the predecessor lands. Workers never commit. The coordinator records structured `completed`, `retryable`, `failed`, or `blocked` outcomes and evidence manifests before retry or continuation.
 
-Each repair receives `repair-agent-prompt.md` with:
+Each repair receives `worker-repair.md` with:
 
 - coordinator state path and immutable approval digest
 - confirmed finding IDs and fresh approval digest

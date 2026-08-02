@@ -2,9 +2,9 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TEMPLATE="$SCRIPT_DIR/../references/audit-file-template.md"
+TEMPLATE="$SCRIPT_DIR/../references/audit.md"
 
-usage() { echo "Usage: file-findings.sh <scope-slug> [--root <repo-root>] [--read-only]" >&2; }
+usage() { echo "Usage: findings-file.sh <scope-slug> [--root <repo-root>] [--read-only]" >&2; }
 scope="${1:-}"
 [[ -n "$scope" ]] || {
   usage

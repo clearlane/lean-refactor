@@ -2,8 +2,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=lib.sh disable=SC1091
-source "$SCRIPT_DIR/lib.sh"
+# shellcheck source=state.sh disable=SC1091
+source "$SCRIPT_DIR/state.sh"
 
 block() { jq -n --arg reason "$1" '{decision:"block",reason:$reason,systemMessage:"Lean-Refactor blocked"}'; }
 input=$(cat)

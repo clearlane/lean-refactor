@@ -1,10 +1,10 @@
 #!/bin/bash
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/lib.sh"
+source "$SCRIPT_DIR/state.sh"
 
 [[ $# -eq 1 ]] || {
-  echo "Usage: verify-approval.sh <STATE>" >&2
+  echo "Usage: approval-verify.sh <STATE>" >&2
   exit 64
 }
 

@@ -1,6 +1,6 @@
 # Repair Patterns
 
-Non-normative recipes for confirmed SSOT findings. Approval, Hard-Cut, worktree, TDD, and verification rules remain canonical in `../SKILL.md` and `repair-agent-prompt.md`; examples below never override them.
+Non-normative recipes for confirmed SSOT findings. Approval, Hard-Cut, worktree, TDD, and verification rules remain canonical in `../SKILL.md` and `worker-repair.md`; examples below never override them.
 
 ---
 
@@ -212,4 +212,4 @@ Replace each manual `->set_placeholder()` matching the default's label.
 
 ## Applying recipes
 
-Use recipe only when canonical evidence is `confirmed`, including complete dynamic/indirect and persisted-store surfaces plus semantic equivalence; unqueryable stores remain `blocked`. Execute through `repair-agent-prompt.md` with mutation-sensitive focused tests and raw artifacts. Treat snippets as examples, not policy.
+Use recipe only when canonical evidence is `confirmed`, including complete dynamic/indirect and persisted-store surfaces plus semantic equivalence; unqueryable stores remain `blocked`. Execute through `worker-repair.md` with mutation-sensitive focused tests and raw artifacts. Treat snippets as examples, not policy.

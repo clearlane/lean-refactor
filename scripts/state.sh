@@ -1,11 +1,23 @@
 #!/bin/bash
 
-readonly COMPOUND_STATE_SCHEMA_VERSION=8
-readonly COMPOUND_STATE_PREFIX="lean-refactor."
-readonly COMPOUND_STATE_SUFFIX=".local.md"
-readonly COMPOUND_STATE_FIELDS="schema_version session_id phase iteration max_iterations tier_floor mode root_path scope_path baseline_commit audit_file audit_hash approval_status approval_digest approval_recorded_at approver approval_conditions approved_findings approved_tier approval_exclusions repository_fingerprint baseline_result_artifact baseline_result_hash reference_inventory_artifact reference_inventory_hash evidence_artifact evidence_hash classification_artifact classification_hash boundary_diff_artifact boundary_diff_hash state_impact_artifact state_impact_hash external_impact_artifact external_impact_hash discovery_ledger discovery_ledger_hash boundary_ledger boundary_ledger_hash current_signature previous_signature expected_wave_manifest expected_wave_manifest_hash expected_wave_status failure_count failure_limit last_failure"
-readonly COMPOUND_OPTIONAL_FIELDS="audit_file audit_hash approval_digest approval_recorded_at approver approval_conditions approved_findings approved_tier approval_exclusions repository_fingerprint baseline_result_artifact baseline_result_hash reference_inventory_artifact reference_inventory_hash evidence_artifact evidence_hash classification_artifact classification_hash boundary_diff_artifact boundary_diff_hash state_impact_artifact state_impact_hash external_impact_artifact external_impact_hash current_signature previous_signature expected_wave_manifest expected_wave_manifest_hash expected_wave_status last_failure"
-COMPOUND_STATE_LOCK=""
+readonly LEAN_STATE_SCHEMA_VERSION=8
+readonly LEAN_STATE_PREFIX="lean-refactor."
+readonly LEAN_STATE_SUFFIX=".local.md"
+readonly LEAN_STATE_FIELDS="schema_version session_id phase iteration max_iterations tier_floor mode root_path scope_path baseline_commit audit_file audit_hash approval_status approval_digest approval_recorded_at approver approval_conditions approved_findings approved_tier approval_exclusions repository_fingerprint baseline_result_artifact baseline_result_hash reference_inventory_artifact reference_inventory_hash evidence_artifact evidence_hash classification_artifact classification_hash boundary_diff_artifact boundary_diff_hash state_impact_artifact state_impact_hash external_impact_artifact external_impact_hash discovery_ledger discovery_ledger_hash boundary_ledger boundary_ledger_hash current_signature previous_signature expected_wave_manifest expected_wave_manifest_hash expected_wave_status failure_count failure_limit last_failure"
+readonly LEAN_OPTIONAL_FIELDS="audit_file audit_hash approval_digest approval_recorded_at approver approval_conditions approved_findings approved_tier approval_exclusions repository_fingerprint baseline_result_artifact baseline_result_hash reference_inventory_artifact reference_inventory_hash evidence_artifact evidence_hash classification_artifact classification_hash boundary_diff_artifact boundary_diff_hash state_impact_artifact state_impact_hash external_impact_artifact external_impact_hash current_signature previous_signature expected_wave_manifest expected_wave_manifest_hash expected_wave_status last_failure"
+LEAN_STATE_LOCK=""
+LEAN_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LEAN_SCHEMA_DIR="${LEAN_SCHEMA_DIR:-$LEAN_SCRIPT_DIR/../schemas}"
+
+validate_json_schema() {
+  local schema="$1" instance="$2"
+  [[ -f "$schema" && -f "$instance" ]] || return 1
+  if [[ "${LEAN_REFACTOR_STRICT_SCHEMA:-0}" == 1 ]] && command -v check-jsonschema >/dev/null 2>&1; then
+    check-jsonschema --schemafile "$schema" "$instance" >/dev/null 2>&1
+  else
+    jq -e . "$instance" >/dev/null
+  fi
+}
 
 acquire_state_lock() {
   local file="$1" lock owner stale
@@ -23,21 +35,25 @@ acquire_state_lock() {
     fi
     rm -rf "$stale"
   fi
-  COMPOUND_STATE_LOCK="$lock"
+  LEAN_STATE_LOCK="$lock"
   printf '%s\n' "$$" >"$lock/pid"
 }
 
 release_state_lock() {
-  [[ -n "$COMPOUND_STATE_LOCK" ]] || return 0
-  rm -rf "$COMPOUND_STATE_LOCK"
-  COMPOUND_STATE_LOCK=""
+  [[ -n "$LEAN_STATE_LOCK" ]] || return 0
+  rm -rf "$LEAN_STATE_LOCK"
+  LEAN_STATE_LOCK=""
 }
 
 parse_field() {
   local file="$1" key="$2"
-  sed -n '/^---$/,/^---$/{
-    /^'"$key"':/{ s/'"$key"': *//; s/^["'"'"']//; s/["'"'"']$//; p; q; }
-  }' "$file" 2>/dev/null || true
+  if [[ "${LEAN_REFACTOR_USE_YQ:-0}" == 1 ]] && command -v yq >/dev/null 2>&1; then
+    yq --front-matter=extract -r ".${key} // \"\"" "$file" 2>/dev/null || true
+  else
+    sed -n '/^---$/,/^---$/{
+      /^'"$key"':/{ s/'"$key"': *//; s/^["'"'"']//; s/["'"'"']$//; p; q; }
+    }' "$file" 2>/dev/null || true
+  fi
 }
 
 resolve_directory() {
@@ -57,12 +73,12 @@ resolve_root() {
   fi
 }
 state_dir() { printf '%s/.claude\n' "$1"; }
-state_path() { printf '%s/%s%s%s\n' "$(state_dir "$1")" "$COMPOUND_STATE_PREFIX" "$2" "$COMPOUND_STATE_SUFFIX"; }
+state_path() { printf '%s/%s%s%s\n' "$(state_dir "$1")" "$LEAN_STATE_PREFIX" "$2" "$LEAN_STATE_SUFFIX"; }
 extract_session_id() {
   local name
   name=$(basename "$1")
-  name=${name#"$COMPOUND_STATE_PREFIX"}
-  printf '%s\n' "${name%"$COMPOUND_STATE_SUFFIX"}"
+  name=${name#"$LEAN_STATE_PREFIX"}
+  printf '%s\n' "${name%"$LEAN_STATE_SUFFIX"}"
 }
 valid_session_id() { [[ "$1" =~ ^[A-Za-z0-9._-]+$ ]]; }
 list_state_files() {
@@ -70,7 +86,7 @@ list_state_files() {
   dir=$(state_dir "$root")
   [[ -d "$dir" ]] || return 0
   shopt -s nullglob
-  for file in "$dir"/"$COMPOUND_STATE_PREFIX"*"$COMPOUND_STATE_SUFFIX"; do printf '%s\n' "$file"; done
+  for file in "$dir"/"$LEAN_STATE_PREFIX"*"$LEAN_STATE_SUFFIX"; do printf '%s\n' "$file"; done
   shopt -u nullglob
 }
 
@@ -90,7 +106,7 @@ write_state() {
   tmp="${file}.tmp.$$"
   cat >"$tmp" <<EOF
 ---
-schema_version: "$COMPOUND_STATE_SCHEMA_VERSION"
+schema_version: "$LEAN_STATE_SCHEMA_VERSION"
 session_id: "$session_id"
 phase: "discovery"
 iteration: "1"
@@ -145,15 +161,15 @@ EOF
 validate_state() {
   local file="$1" key value sid root scope optional ledger discovery
   [[ -f "$file" ]] || return 1
-  for key in $COMPOUND_STATE_FIELDS; do
+  for key in $LEAN_STATE_FIELDS; do
     value=$(parse_field "$file" "$key")
-    optional=" $COMPOUND_OPTIONAL_FIELDS "
+    optional=" $LEAN_OPTIONAL_FIELDS "
     [[ -n "$value" || "$optional" == *" $key "* ]] || return 1
   done
-  [[ "$(parse_field "$file" schema_version)" == "$COMPOUND_STATE_SCHEMA_VERSION" ]] || return 1
+  [[ "$(parse_field "$file" schema_version)" == "$LEAN_STATE_SCHEMA_VERSION" ]] || return 1
   sid=$(parse_field "$file" session_id)
   valid_session_id "$sid" || return 1
-  [[ "$(extract_session_id "${COMPOUND_STATE_CANONICAL_PATH:-$file}")" == "$sid" ]] || return 1
+  [[ "$(extract_session_id "${LEAN_STATE_CANONICAL_PATH:-$file}")" == "$sid" ]] || return 1
   [[ "$(parse_field "$file" iteration)" =~ ^[1-9][0-9]*$ && "$(parse_field "$file" max_iterations)" =~ ^[1-9][0-9]*$ ]] || return 1
   [[ "$(parse_field "$file" tier_floor)" =~ ^[1-4]$ && "$(parse_field "$file" failure_count)" =~ ^[0-9]+$ && "$(parse_field "$file" failure_limit)" =~ ^[1-9][0-9]*$ ]] || return 1
   [[ "$(parse_field "$file" failure_limit)" == 2 ]] || return 1
@@ -162,7 +178,7 @@ validate_state() {
   root=$(parse_field "$file" root_path)
   scope=$(parse_field "$file" scope_path)
   [[ "$root" == /* && -d "$root" && "$scope" == /* && -d "$scope" ]] || return 1
-  local canonical_state="${COMPOUND_STATE_CANONICAL_PATH:-$file}"
+  local canonical_state="${LEAN_STATE_CANONICAL_PATH:-$file}"
   [[ "$canonical_state" == "$(state_path "$root" "$sid")" ]] || return 1
   ledger=$(parse_field "$file" boundary_ledger)
   [[ "$ledger" == "${canonical_state%.local.md}.boundaries.json" && -f "$ledger" && "$(sha256_file "$ledger")" == "$(parse_field "$file" boundary_ledger_hash)" ]] || return 1
@@ -174,6 +190,7 @@ validate_discovery_ledger() {
   local state="$1" ledger artifact expected_hash
   validate_state "$state" || return 1
   ledger=$(parse_field "$state" discovery_ledger)
+  validate_json_schema "$LEAN_SCHEMA_DIR/discovery-ledger.schema.json" "$ledger" || return 1
   jq -e --arg sid "$(parse_field "$state" session_id)" '
     .schema_version == 1 and .session_id == $sid and (.iterations | type == "object") and
     ([.iterations[] | [.prior_art, .layers, .synthesis, .audit][] |
@@ -203,6 +220,7 @@ validate_boundary_ledger() {
   local state="$1" ledger manifest expected_hash
   validate_state "$state" || return 1
   ledger=$(parse_field "$state" boundary_ledger)
+  validate_json_schema "$LEAN_SCHEMA_DIR/boundary-ledger.schema.json" "$ledger" || return 1
   jq -e --arg sid "$(parse_field "$state" session_id)" '
     .schema_version == 2 and .session_id == $sid and (.boundaries | type == "object") and
     ([.boundaries[] | . as $boundary |
@@ -266,18 +284,28 @@ boundary_ledger_ready() {
 }
 
 update_fields() {
-  local file="$1" tmp key value assignments="" separator=""
+  local file="$1" tmp key value assignments="" separator="" expression=""
   shift
   (($# >= 2 && $# % 2 == 0)) || return 1
   while (($# > 0)); do
     key="$1"
     value="$2"
     shift 2
-    [[ " $COMPOUND_STATE_FIELDS " == *" $key "* && "$value" != *$'\n'* && "$value" != *:* ]] || return 1
+    [[ " $LEAN_STATE_FIELDS " == *" $key "* && "$value" != *$'\n'* && "$value" != *:* ]] || return 1
     assignments+="${separator}${key}=${value}"
     separator=$'\034'
+    expression+=".${key} = \"$(printf '%s' "$value" | sed 's/\\/\\\\/g; s/\"/\\\"/g')\" | "
   done
   tmp="${file}.tmp.$$"
+  if [[ "${LEAN_REFACTOR_USE_YQ:-0}" == 1 ]] && command -v yq >/dev/null 2>&1; then
+    expression=${expression% | }
+    yq --front-matter=process "$expression" "$file" >"$tmp" || {
+      rm -f "$tmp"
+      return 1
+    }
+    mv "$tmp" "$file"
+    return 0
+  fi
   awk -v assignments="$assignments" '
     BEGIN {
       count = split(assignments, pairs, "\034")
@@ -411,7 +439,7 @@ EOF
   release_state_lock
 }
 
-audit_field() { sed -n 's/^compound_'"$2"':[[:space:]]*//p' "$1" | tail -n 1; }
+audit_field() { sed -n 's/^lean_'"$2"':[[:space:]]*//p' "$1" | tail -n 1; }
 validate_terminal_audit() {
   local file="$1" marker="$2" audit current previous approval_required
   validate_state "$file" || return 1

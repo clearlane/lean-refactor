@@ -40,7 +40,7 @@ After editing:
 - Record baseline and post evidence side by side, including command, exit code, and raw artifact/hash.
 - Confirm changed/staged paths match allowlist and index is clean after orchestrator-controlled staging reset; do not commit.
 - Confirm no protected test was removed, weakened, skipped, or made less specific.
-- Return files changed, line delta, behavior, evidence, remaining unknowns, and recovery instruction. Return the boundary-result JSON manifest required by `iterative-loop.md` for every completed or failed outcome. The coordinator validates it, re-hashes evidence, and increments durable counters through `scripts/workflow.sh boundary`; workers never edit workflow state.
+- Return files changed, line delta, behavior, evidence, remaining unknowns, and recovery instruction. Return the boundary-result JSON manifest required by `workflow.md` for every completed or failed outcome. The coordinator validates it, re-hashes evidence, and increments durable counters through `scripts/workflow.sh boundary`; workers never edit workflow state.
 
 STOP without edits, or stop at safest reversible point, when:
 - finding is not confirmed or current reference surface differs from audit evidence

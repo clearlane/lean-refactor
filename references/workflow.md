@@ -1,6 +1,6 @@
 # Iterative Loop — Runtime Contract
 
-Canonical workflow and marker meaning live in `../SKILL.md`. Executable schema, validation, digests, root resolution, failure evidence, and audit checks live in `../scripts/lib.sh`; this document names that contract without copying its field list.
+Canonical workflow and marker meaning live in `../SKILL.md`. Executable schema, validation, digests, root resolution, failure evidence, and audit checks live in `../scripts/state.sh`; this document names that contract without copying its field list.
 
 ## Root and setup
 
@@ -12,7 +12,7 @@ Iterative Git mode is strictly clean-only. The coordinator's initialization adap
 scripts/workflow.sh init <SCOPE_PATH> [--max-iterations N] [--tier-floor 1|2|3|4] [--code-only]
 ```
 
-Setup calls `write_state` from `lib.sh`. `COMPOUND_STATE_FIELDS` is canonical ordered schema. State path is `<root_path>/.claude/lean-refactor.<session_id>.local.md`; format is flat frontmatter, one colon/newline-free scalar per field. `schema_version` rejects stale layouts.
+Setup calls `write_state` from `state.sh`. `LEAN_STATE_FIELDS` is canonical ordered schema. State path is `<root_path>/.claude/lean-refactor.<session_id>.local.md`; format is flat frontmatter, one colon/newline-free scalar per field. `schema_version` rejects stale layouts.
 
 Schema covers identity/counters/mode/paths/baseline; the coordinator `phase`; audit path and content hash; approval status/digest/time/approver/conditions/findings/tier/exclusions; live repository fingerprint; artifact path/hash pairs for baseline result, reference inventory, evidence, classification, boundary diff, state impact, and external impact; discovery-checkpoint and boundary-ledger path/hash pairs; current/previous finding signatures; expected-wave manifest path/hash/status; hook failure count/limit/evidence. Approved state requires every approval-bound value except exclusions and conditions. Validation recomputes repository fingerprint and every source artifact hash; copied state hashes cannot establish freshness.
 
@@ -41,7 +41,7 @@ scripts/workflow.sh finalize <STATE> <AUDIT> --manifest FILE \
   --repair-ready-count N --approval-required yes|no
 ```
 
-Finalize only after repair and verification complete. Command requires pending state, unchanged approved manifest, and a valid immutable approval envelope; live repository freshness was consumed at the pre-mutation gate and is expected to differ after repair. It then atomically appends canonical machine fields and marks wave complete. Machine fields use exact `compound_<key>:` names. Records are append-only; parser uses last exact occurrence. No manual state edits are supported.
+Finalize only after repair and verification complete. Command requires pending state, unchanged approved manifest, and a valid immutable approval envelope; live repository freshness was consumed at the pre-mutation gate and is expected to differ after repair. It then atomically appends canonical machine fields and marks wave complete. Machine fields use exact `lean_<key>:` names. Records are append-only; parser uses last exact occurrence. No manual state edits are supported.
 
 ## Stop hook
 
@@ -50,14 +50,14 @@ The host hook is a thin event adapter: it parses hook JSON, identifies the exact
 Assistant marker alone has no authority. Audit must append machine-readable lines:
 
 ```text
-compound_iteration: <current integer>
-compound_repair_ready_count: <integer>
-compound_verification: complete
-compound_approval_required: yes|no
-compound_current_signature: <stable SHA-256>
-compound_previous_signature: <stable SHA-256 or empty>
-compound_expected_wave_status: complete
-compound_expected_wave_manifest_hash: <current manifest SHA-256>
+lean_iteration: <current integer>
+lean_repair_ready_count: <integer>
+lean_verification: complete
+lean_approval_required: yes|no
+lean_current_signature: <stable SHA-256>
+lean_previous_signature: <stable SHA-256 or empty>
+lean_expected_wave_status: complete
+lean_expected_wave_manifest_hash: <current manifest SHA-256>
 ```
 
 `<lean-refactor-complete>` is accepted only when state/audit hashes and current iteration match, expected wave and verification are complete, repair-ready count is zero, current signature matches state, and approval validates when `approval_required: yes`.

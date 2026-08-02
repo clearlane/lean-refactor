@@ -14,7 +14,10 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install checks
-        run: sudo apt-get update && sudo apt-get install -y jq shellcheck shfmt
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq shellcheck shfmt bats
+          python -m pip install check-jsonschema
 
       - name: Check shell syntax
         run: bash -n scripts/*.sh
@@ -23,14 +26,27 @@ jobs:
         run: shellcheck -S warning scripts/*.sh
 
       - name: Check shell formatting
-        run: shfmt -d -i 2 -ci scripts/*.sh
+        run: shfmt -d -i 2 -ci scripts/*.sh tests/*.bats
+
+      - name: Check resource filenames
+        run: bash scripts/names.sh
 
       - name: Run lifecycle self-check
-        run: bash scripts/lifecycle-self-check.sh
+        env:
+          LEAN_REFACTOR_STRICT_SCHEMA: "1"
+        run: bash scripts/lifecycle-check.sh
+
+      - name: Validate JSON Schemas
+        env:
+          LEAN_REFACTOR_STRICT_SCHEMA: "1"
+        run: |
+          for schema in schemas/*.json; do jq -e . "$schema" >/dev/null; done
+          scripts/repo-frame.sh . --output /tmp/repo-frame.json
+          check-jsonschema --schemafile schemas/repo-frame.schema.json /tmp/repo-frame.json
 
       - name: Scan live sources for stale identity
         run: |
-          if grep -RInE 'compound-refactor|compound_refactor|COMPOUND_REFACTOR' \
+          if grep -RInE 'compound-refactor|compound_|COMPOUND_' \
             --exclude-dir=.git \
             --exclude-dir=.agents \
             --exclude-dir=.omo \

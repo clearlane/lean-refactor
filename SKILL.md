@@ -22,7 +22,7 @@ Outputs:
 - Ranked atomic boundaries with canonicality proof and reproducible evidence.
 - For approved mutations: isolated repairs, verification artifacts, commits when authorized, and convergence evidence.
 
-`jq` and Bash are required for resumable runs. Use host-native bounded delegation, review, planning, and learning-capture capabilities when available; [methodology.md](references/methodology.md) defines capability-based fallbacks without requiring a particular runtime or plugin.
+`jq` and Bash are required for resumable runs. CodeGraph, `scc`, a CPD implementation, and `ast-grep` are optional discovery accelerators; absence or unsupported languages must fall back deterministically. Use host-native bounded delegation, review, planning, and learning-capture capabilities when available; [methodology.md](references/methodology.md) defines capability-based fallbacks without requiring a particular runtime or plugin.
 
 ## Coordinator Entry
 
@@ -43,7 +43,7 @@ Keep the returned state path. Use only these coordinator transitions:
 - `advance` — evaluate markers and resume or terminate; normally called by the host event adapter.
 - `status` and `cancel` — inspect or terminate durable state.
 
-The coordinator owns ordering, transitions, retries, counters, approvals, and resume state. Workers return bounded artifacts and never edit workflow state. Read [iterative-loop.md](references/iterative-loop.md) for exact command contracts and state semantics.
+The coordinator owns ordering, transitions, retries, counters, approvals, and resume state. Workers return bounded artifacts and never edit workflow state. Read [workflow.md](references/workflow.md) for exact command contracts and state semantics.
 
 ## Safety and Evidence Invariants
 
@@ -73,18 +73,21 @@ Every failed repair or verification records a hashed manifest. The coordinator o
 1. For read-only discovery, return the complete audit inline and stop before filesystem persistence, approval, or repair.
 2. For mutating Git runs, require a clean dedicated worktree before initialization. Never stash or commit user work without authorization. Use `--code-only` only as an explicit non-Git choice.
 3. Run prior art first; record it with `workflow.sh discovery --stage prior-art`.
-4. Run independent discovery lenses through bounded parallel delegation; persist their complete aggregate with `--stage layers`.
-5. Run synthesis only after all layer reports; persist it with `--stage synthesis`.
-6. Persist the exhaustive audit before approval and record it with `--stage audit`.
-7. Obtain and persist exact approval before mutation.
-8. Repair one atomic boundary per worker in an isolated named worktree or code-only snapshot. Parallelize only non-conflicting boundaries.
-9. Record repair and verification outcomes through `workflow.sh boundary`; the coordinator rejects out-of-order, unapproved, blocked, or incomplete work.
-10. Finalize the wave, integrate verified commits in dependency order, update audit metadata separately, capture reusable learnings, and rediscover.
+4. Create an optional deterministic repository frame with `scripts/repo-frame.sh SCOPE --output ARTIFACT`. Reuse an existing CodeGraph index when ready; initialize one only with explicit authorization via `--init-codegraph`. Include the frame in every layer brief.
+5. Run independent discovery lenses through bounded parallel delegation; persist their complete aggregate with `--stage layers`.
+6. Run synthesis only after all layer reports; persist it with `--stage synthesis`.
+7. Persist the exhaustive audit before approval and record it with `--stage audit`.
+8. Obtain and persist exact approval before mutation.
+9. Repair one atomic boundary per worker in an isolated named worktree or code-only snapshot. Parallelize only non-conflicting boundaries.
+10. Record repair and verification outcomes through `workflow.sh boundary`; the coordinator rejects out-of-order, unapproved, blocked, or incomplete work.
+11. Finalize the wave, integrate verified commits in dependency order, update audit metadata separately, capture reusable learnings, and rediscover.
 
-Read [methodology.md](references/methodology.md) for the detailed execution procedure, capability fallbacks, concurrency, Git ownership, and handoff rules. Use [discovery-agent-prompts.md](references/discovery-agent-prompts.md) for discovery workers, [ranking-rubric.md](references/ranking-rubric.md) for scoring, [audit-file-template.md](references/audit-file-template.md) for persistence, and [repair-agent-prompt.md](references/repair-agent-prompt.md) for one approved repair boundary. [repair-patterns.md](references/repair-patterns.md) contains non-normative recipes.
+Read [methodology.md](references/methodology.md) for the detailed execution procedure, capability fallbacks, concurrency, Git ownership, and handoff rules. Use [worker-discovery.md](references/worker-discovery.md) for discovery workers, [ranking.md](references/ranking.md) for scoring, [audit.md](references/audit.md) for persistence, and [worker-repair.md](references/worker-repair.md) for one approved repair boundary. [repair.md](references/repair.md) contains non-normative recipes.
 
 ## Completion
 
 Emit `<lean-refactor-complete>` only after `workflow.sh conclude-discovery` records zero repair-ready findings at or below the tier floor. Emit `<lean-refactor-stuck>` only when the current and previous normalized finding signatures are identical and audit-backed. The host event adapter delegates marker decisions to `workflow.sh advance`; marker text alone has no authority.
 
-Before handoff, run repository-native checks, including this skill's `bash -n`, ShellCheck, shfmt, and lifecycle self-check when these files changed.
+Before handoff, run repository-native checks, including this skill's `bash -n`, ShellCheck, shfmt, `scripts/names.sh` filename check, Bats lifecycle tests (or portable smoke fallback), JSON Schema checks, and repository-frame validation when these files changed.
+
+Name every resource you add or rename with one lowercase word, or a family-first lowercase hyphenated stem when one word is ambiguous. Put the stable family first (`loop-setup.sh`, not `setup-loop.sh`) so siblings sort together, and avoid generic segments such as `helper`, `utils`, or `new`. `scripts/names.sh` enforces this and preserves names fixed by an external contract.

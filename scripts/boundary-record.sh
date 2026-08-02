@@ -1,10 +1,10 @@
 #!/bin/bash
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/lib.sh"
+source "$SCRIPT_DIR/state.sh"
 
 usage() {
-  echo "Usage: record-boundary-result.sh <STATE> --boundary ID --kind repair|verification --result completed|retryable|failed|blocked --manifest FILE" >&2
+  echo "Usage: boundary-record.sh <STATE> --boundary ID --kind repair|verification --result completed|retryable|failed|blocked --manifest FILE" >&2
 }
 
 [[ $# -ge 1 ]] || {
@@ -55,6 +55,10 @@ validate_state "$state" || {
 }
 [[ "$manifest" == /* && -f "$manifest" ]] || {
   echo "Error: manifest must be an absolute existing file" >&2
+  exit 64
+}
+validate_json_schema "$LEAN_SCHEMA_DIR/boundary-manifest.schema.json" "$manifest" || {
+  echo "Error: boundary manifest does not satisfy schemas/boundary-manifest.schema.json" >&2
   exit 64
 }
 jq -e --arg boundary "$boundary" --arg result "$result" '
@@ -183,7 +187,7 @@ update_field "$next_state" boundary_ledger_hash "$(sha256_file "$next_ledger")"
 if [[ "$kind" == repair ]]; then update_field "$next_state" phase repair; else update_field "$next_state" phase verification; fi
 cp "$ledger" "$backup_ledger"
 mv "$next_ledger" "$ledger"
-COMPOUND_STATE_CANONICAL_PATH="$state" validate_boundary_ledger "$next_state" || {
+LEAN_STATE_CANONICAL_PATH="$state" validate_boundary_ledger "$next_state" || {
   mv "$backup_ledger" "$ledger"
   echo "Error: boundary result failed validation" >&2
   exit 1
