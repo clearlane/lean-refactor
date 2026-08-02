@@ -49,7 +49,8 @@ while IFS= read -r file; do
     invalid=1
     continue
   fi
-  rm -f "$file"
+  ledger=$(parse_field "$file" boundary_ledger)
+  rm -f "$file" "$ledger"
   echo "Cancelled session: $sid"
 done < <(list_state_files "$root")
 

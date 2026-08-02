@@ -1,9 +1,9 @@
 #!/bin/bash
 
-readonly COMPOUND_STATE_SCHEMA_VERSION=4
+readonly COMPOUND_STATE_SCHEMA_VERSION=5
 readonly COMPOUND_STATE_PREFIX="lean-refactor."
 readonly COMPOUND_STATE_SUFFIX=".local.md"
-readonly COMPOUND_STATE_FIELDS="schema_version session_id iteration max_iterations tier_floor mode root_path scope_path baseline_commit audit_file audit_hash approval_status approval_digest approval_recorded_at approved_findings approved_tier approval_exclusions repository_fingerprint baseline_result_artifact baseline_result_hash reference_inventory_artifact reference_inventory_hash evidence_artifact evidence_hash classification_artifact classification_hash boundary_diff_artifact boundary_diff_hash state_impact_artifact state_impact_hash external_impact_artifact external_impact_hash current_signature previous_signature expected_wave_manifest expected_wave_manifest_hash expected_wave_status failure_count failure_limit last_failure"
+readonly COMPOUND_STATE_FIELDS="schema_version session_id iteration max_iterations tier_floor mode root_path scope_path baseline_commit audit_file audit_hash approval_status approval_digest approval_recorded_at approved_findings approved_tier approval_exclusions repository_fingerprint baseline_result_artifact baseline_result_hash reference_inventory_artifact reference_inventory_hash evidence_artifact evidence_hash classification_artifact classification_hash boundary_diff_artifact boundary_diff_hash state_impact_artifact state_impact_hash external_impact_artifact external_impact_hash boundary_ledger boundary_ledger_hash current_signature previous_signature expected_wave_manifest expected_wave_manifest_hash expected_wave_status failure_count failure_limit last_failure"
 readonly COMPOUND_OPTIONAL_FIELDS="audit_file audit_hash approval_digest approval_recorded_at approved_findings approved_tier approval_exclusions repository_fingerprint baseline_result_artifact baseline_result_hash reference_inventory_artifact reference_inventory_hash evidence_artifact evidence_hash classification_artifact classification_hash boundary_diff_artifact boundary_diff_hash state_impact_artifact state_impact_hash external_impact_artifact external_impact_hash current_signature previous_signature expected_wave_manifest expected_wave_manifest_hash expected_wave_status last_failure"
 
 parse_field() {
@@ -55,7 +55,9 @@ sha256_file() {
 canonical_digest() { printf '%s\0' "$@" | sha256_stream; }
 
 write_state() {
-  local file="$1" session_id="$2" max_iterations="$3" tier_floor="$4" mode="$5" root="$6" scope="$7" baseline="$8" tmp
+  local file="$1" session_id="$2" max_iterations="$3" tier_floor="$4" mode="$5" root="$6" scope="$7" baseline="$8" tmp ledger
+  ledger="${file%.local.md}.boundaries.json"
+  printf '{"schema_version":1,"session_id":"%s","boundaries":{}}\n' "$session_id" >"$ledger"
   tmp="${file}.tmp.$$"
   cat >"$tmp" <<EOF
 ---
@@ -91,6 +93,8 @@ state_impact_artifact: ""
 state_impact_hash: ""
 external_impact_artifact: ""
 external_impact_hash: ""
+boundary_ledger: "$ledger"
+boundary_ledger_hash: "$(sha256_file "$ledger")"
 current_signature: ""
 previous_signature: ""
 expected_wave_manifest: ""
@@ -105,7 +109,7 @@ EOF
 }
 
 validate_state() {
-  local file="$1" key value sid root scope optional
+  local file="$1" key value sid root scope optional ledger
   [[ -f "$file" ]] || return 1
   for key in $COMPOUND_STATE_FIELDS; do
     value=$(parse_field "$file" "$key")
@@ -123,7 +127,41 @@ validate_state() {
   root=$(parse_field "$file" root_path)
   scope=$(parse_field "$file" scope_path)
   [[ "$root" == /* && -d "$root" && "$scope" == /* && -d "$scope" ]] || return 1
-  [[ "${COMPOUND_STATE_CANONICAL_PATH:-$file}" == "$(state_path "$root" "$sid")" ]] || return 1
+  local canonical_state="${COMPOUND_STATE_CANONICAL_PATH:-$file}"
+  [[ "$canonical_state" == "$(state_path "$root" "$sid")" ]] || return 1
+  ledger=$(parse_field "$file" boundary_ledger)
+  [[ "$ledger" == "${canonical_state%.local.md}.boundaries.json" && -f "$ledger" && "$(sha256_file "$ledger")" == "$(parse_field "$file" boundary_ledger_hash)" ]] || return 1
+}
+
+validate_boundary_ledger() {
+  local state="$1" ledger manifest expected_hash
+  validate_state "$state" || return 1
+  ledger=$(parse_field "$state" boundary_ledger)
+  jq -e --arg sid "$(parse_field "$state" session_id)" '
+    .schema_version == 1 and .session_id == $sid and (.boundaries | type == "object") and
+    ([.boundaries[] |
+      (.status | IN("pending", "completed", "blocked")) and
+      (.repair_attempts | type == "number" and . >= 0) and
+      (.verification_failures | type == "number" and . >= 0) and
+      (.repair_limit | type == "number" and . >= 1) and
+      (.verification_limit | type == "number" and . >= 1) and
+      (.repair_status | IN("pending", "completed", "blocked")) and
+      (.verification_status | IN("pending", "completed", "blocked")) and
+      (.last_result | type == "string") and
+      (.last_manifest | type == "string") and
+      (.last_manifest_hash | type == "string")
+    ] | all)
+  ' "$ledger" >/dev/null || return 1
+  while IFS=$'\t' read -r manifest expected_hash; do
+    [[ "$manifest" == /* && -f "$manifest" && "$(sha256_file "$manifest")" == "$expected_hash" ]] || return 1
+  done < <(jq -r '.boundaries[] | select(.last_manifest != "") | [.last_manifest, .last_manifest_hash] | @tsv' "$ledger")
+}
+
+boundary_ledger_ready() {
+  local state="$1" ledger
+  validate_boundary_ledger "$state" || return 1
+  ledger=$(parse_field "$state" boundary_ledger)
+  jq -e '[.boundaries[] | select(.status == "pending")] | length == 0' "$ledger" >/dev/null
 }
 
 update_field() {

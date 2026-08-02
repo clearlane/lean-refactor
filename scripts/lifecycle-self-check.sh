@@ -24,6 +24,14 @@ if validate_wave "$state"; then exit 1; fi
 printf 'repaired\n' >"$root/source.txt"
 if validate_approval "$state"; then exit 1; fi
 validate_approval_envelope "$state"
+boundary_manifest="$tmp/boundary-result"
+printf 'boundary attempt\n' >"$boundary_manifest"
+"$SCRIPT_DIR/record-boundary-result.sh" "$state" --boundary F1 --kind repair --result retryable --manifest "$boundary_manifest" >/dev/null
+if boundary_ledger_ready "$state"; then exit 1; fi
+"$SCRIPT_DIR/record-boundary-result.sh" "$state" --boundary F1 --kind repair --result completed --manifest "$boundary_manifest" >/dev/null
+if boundary_ledger_ready "$state"; then exit 1; fi
+"$SCRIPT_DIR/record-boundary-result.sh" "$state" --boundary F1 --kind verification --result completed --manifest "$boundary_manifest" >/dev/null
+boundary_ledger_ready "$state"
 signature=$(printf 'F1' | sha256_stream)
 "$SCRIPT_DIR/record-wave.sh" "$state" "$audit" --manifest "$tmp/wave" \
   --current-signature "$signature" --repair-ready-count 0 --approval-required no >/dev/null

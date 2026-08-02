@@ -55,6 +55,10 @@ validate_approval_envelope "$state" || {
   echo "Error: approval envelope is invalid" >&2
   exit 1
 }
+boundary_ledger_ready "$state" || {
+  echo "Error: one or more boundary results remain pending or invalid" >&2
+  exit 1
+}
 next_state="${state}.tmp.$$"
 next_audit="${audit}.tmp.$$"
 backup_audit="${audit}.bak.$$"
