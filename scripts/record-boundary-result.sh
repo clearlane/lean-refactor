@@ -48,6 +48,35 @@ validate_state "$state" || {
   echo "Error: manifest must be an absolute existing file" >&2
   exit 64
 }
+jq -e --arg boundary "$boundary" --arg result "$result" '
+  .schema_version == 1 and
+  .boundary_id == $boundary and
+  .result == $result and
+  (.attempt | type == "number" and . >= 1 and floor == .) and
+  (.branch_worktree | type == "string" and length > 0) and
+  (.base_fingerprint | type == "string" and length > 0) and
+  (.diff_fingerprint | type == "string" and length > 0) and
+  (.allowed_paths | type == "array" and all(.[]; type == "string")) and
+  (.changed_paths | type == "array" and all(.[]; type == "string")) and
+  (.commands | type == "array" and all(.[];
+    (.command | type == "string" and length > 0) and
+    (.exit_code | type == "number") and
+    (.evidence | type == "string"))) and
+  (.evidence_artifacts | type == "array" and all(.[];
+    (.path | type == "string" and startswith("/")) and
+    (.sha256 | type == "string" and test("^[0-9a-fA-F]{64}$")))) and
+  (.blocker | type == "string") and
+  (.stale_dependents | type == "array" and all(.[]; type == "string"))
+' "$manifest" >/dev/null || {
+  echo "Error: boundary manifest does not satisfy the required JSON contract" >&2
+  exit 64
+}
+while IFS=$'\t' read -r evidence_path evidence_hash; do
+  [[ -f "$evidence_path" && "$(sha256_file "$evidence_path")" == "$(printf '%s' "$evidence_hash" | tr '[:upper:]' '[:lower:]')" ]] || {
+    echo "Error: boundary evidence artifact is missing or stale: $evidence_path" >&2
+    exit 1
+  }
+done < <(jq -r '.evidence_artifacts[] | [.path, (.sha256 | ascii_downcase)] | @tsv' "$manifest")
 
 ledger=$(parse_field "$state" boundary_ledger)
 jq -e --arg id "$boundary" '.boundaries | has($id)' "$ledger" >/dev/null || {
@@ -65,6 +94,13 @@ if [[ "$kind" == verification ]]; then
     exit 1
   }
 fi
+if [[ "$kind" == repair ]]; then
+  expected_attempt=$(($(jq -r --arg id "$boundary" '.boundaries[$id].repair_attempts' "$ledger") + 1))
+  [[ "$(jq -r '.attempt' "$manifest")" == "$expected_attempt" ]] || {
+    echo "Error: repair manifest attempt does not match durable counter; expected $expected_attempt" >&2
+    exit 1
+  }
+fi
 next_ledger="${ledger}.tmp.$$"
 next_state="${state}.tmp.$$"
 backup_ledger="${ledger}.bak.$$"
@@ -72,7 +108,7 @@ trap 'rm -f "$next_ledger" "$next_state" "$backup_ledger"' EXIT
 
 repair_increment=0
 verification_increment=0
-if [[ "$kind" == repair && "$result" =~ ^(retryable|failed)$ ]]; then repair_increment=1; fi
+if [[ "$kind" == repair ]]; then repair_increment=1; fi
 if [[ "$kind" == verification && "$result" =~ ^(retryable|failed)$ ]]; then verification_increment=1; fi
 
 jq --arg id "$boundary" --arg kind "$kind" --arg result "$result" \

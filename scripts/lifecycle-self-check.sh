@@ -28,14 +28,30 @@ if validate_wave "$state"; then exit 1; fi
 printf 'repaired\n' >"$root/source.txt"
 if validate_approval "$state"; then exit 1; fi
 validate_approval_envelope "$state"
-boundary_manifest="$tmp/boundary-result"
-printf 'boundary attempt\n' >"$boundary_manifest"
+boundary_evidence="$tmp/boundary-evidence"
+printf 'boundary evidence\n' >"$boundary_evidence"
+write_boundary_manifest() {
+  local file="$1" boundary_id="$2" attempt="$3" result="$4"
+  jq -n --arg boundary_id "$boundary_id" --argjson attempt "$attempt" --arg result "$result" \
+    --arg evidence_path "$boundary_evidence" --arg evidence_hash "$(sha256_file "$boundary_evidence")" '{
+      schema_version: 1, boundary_id: $boundary_id, attempt: $attempt, result: $result,
+      branch_worktree: "code-only", base_fingerprint: "baseline", diff_fingerprint: "diff",
+      allowed_paths: ["source.txt"], changed_paths: ["source.txt"],
+      commands: [{command:"test", exit_code:0, evidence:"captured"}],
+      evidence_artifacts: [{path:$evidence_path, sha256:$evidence_hash}],
+      blocker: "", stale_dependents: []
+    }' >"$file"
+}
+boundary_manifest="$tmp/boundary-result.json"
+write_boundary_manifest "$boundary_manifest" F1 1 retryable
 if "$SCRIPT_DIR/record-boundary-result.sh" "$state" --boundary F2 --kind repair --result completed --manifest "$boundary_manifest" >/dev/null 2>&1; then exit 1; fi
 if "$SCRIPT_DIR/record-boundary-result.sh" "$state" --boundary F1 --kind verification --result completed --manifest "$boundary_manifest" >/dev/null 2>&1; then exit 1; fi
 "$SCRIPT_DIR/workflow.sh" boundary "$state" --boundary F1 --kind repair --result retryable --manifest "$boundary_manifest" >/dev/null
 if boundary_ledger_ready "$state"; then exit 1; fi
+write_boundary_manifest "$boundary_manifest" F1 2 completed
 "$SCRIPT_DIR/workflow.sh" boundary "$state" --boundary F1 --kind repair --result completed --manifest "$boundary_manifest" >/dev/null
 if boundary_ledger_ready "$state"; then exit 1; fi
+write_boundary_manifest "$boundary_manifest" F1 1 completed
 "$SCRIPT_DIR/workflow.sh" boundary "$state" --boundary F1 --kind verification --result completed --manifest "$boundary_manifest" >/dev/null
 boundary_ledger_ready "$state"
 signature=$(printf 'F1' | sha256_stream)
@@ -78,7 +94,9 @@ done
   --evidence "$tmp/classification" --classification "$tmp/classification" \
   --boundary-diff "$tmp/boundary" --state-impact "$tmp/state-impact" \
   --external-impact "$tmp/external-impact" --wave-manifest "$tmp/wave" >/dev/null
+write_boundary_manifest "$boundary_manifest" B1 1 failed
 "$SCRIPT_DIR/workflow.sh" boundary "$blocked_state" --boundary B1 --kind repair --result failed --manifest "$boundary_manifest" >/dev/null
+write_boundary_manifest "$boundary_manifest" B1 2 failed
 "$SCRIPT_DIR/workflow.sh" boundary "$blocked_state" --boundary B1 --kind repair --result failed --manifest "$boundary_manifest" >/dev/null
 if boundary_ledger_ready "$blocked_state"; then exit 1; fi
 if "$SCRIPT_DIR/workflow.sh" boundary "$blocked_state" --boundary B1 --kind repair --result completed --manifest "$boundary_manifest" >/dev/null 2>&1; then exit 1; fi
