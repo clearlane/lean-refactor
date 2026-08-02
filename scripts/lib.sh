@@ -1,6 +1,6 @@
 #!/bin/bash
 
-readonly COMPOUND_STATE_SCHEMA_VERSION=7
+readonly COMPOUND_STATE_SCHEMA_VERSION=8
 readonly COMPOUND_STATE_PREFIX="lean-refactor."
 readonly COMPOUND_STATE_SUFFIX=".local.md"
 readonly COMPOUND_STATE_FIELDS="schema_version session_id phase iteration max_iterations tier_floor mode root_path scope_path baseline_commit audit_file audit_hash approval_status approval_digest approval_recorded_at approver approval_conditions approved_findings approved_tier approval_exclusions repository_fingerprint baseline_result_artifact baseline_result_hash reference_inventory_artifact reference_inventory_hash evidence_artifact evidence_hash classification_artifact classification_hash boundary_diff_artifact boundary_diff_hash state_impact_artifact state_impact_hash external_impact_artifact external_impact_hash discovery_ledger discovery_ledger_hash boundary_ledger boundary_ledger_hash current_signature previous_signature expected_wave_manifest expected_wave_manifest_hash expected_wave_status failure_count failure_limit last_failure"
@@ -58,7 +58,7 @@ write_state() {
   local file="$1" session_id="$2" max_iterations="$3" tier_floor="$4" mode="$5" root="$6" scope="$7" baseline="$8" tmp ledger discovery
   ledger="${file%.local.md}.boundaries.json"
   discovery="${file%.local.md}.discovery.json"
-  printf '{"schema_version":1,"session_id":"%s","boundaries":{}}\n' "$session_id" >"$ledger"
+  printf '{"schema_version":2,"session_id":"%s","boundaries":{}}\n' "$session_id" >"$ledger"
   printf '{"schema_version":1,"session_id":"%s","iterations":{}}\n' "$session_id" >"$discovery"
   tmp="${file}.tmp.$$"
   cat >"$tmp" <<EOF
@@ -164,7 +164,7 @@ validate_boundary_ledger() {
   validate_state "$state" || return 1
   ledger=$(parse_field "$state" boundary_ledger)
   jq -e --arg sid "$(parse_field "$state" session_id)" '
-    .schema_version == 1 and .session_id == $sid and (.boundaries | type == "object") and
+    .schema_version == 2 and .session_id == $sid and (.boundaries | type == "object") and
     ([.boundaries[] |
       (.status | IN("pending", "completed", "blocked")) and
       (.repair_attempts | type == "number" and . >= 0) and
@@ -175,12 +175,22 @@ validate_boundary_ledger() {
       (.verification_status | IN("pending", "completed", "blocked")) and
       (.last_result | type == "string") and
       (.last_manifest | type == "string") and
-      (.last_manifest_hash | type == "string")
+      (.last_manifest_hash | type == "string") and
+      (.history | type == "array") and
+      ([.history[] |
+        (.kind | IN("repair", "verification")) and
+        (.result | IN("completed", "retryable", "failed", "blocked")) and
+        (.attempt | type == "number" and . >= 1 and floor == .) and
+        (.manifest | type == "string" and startswith("/")) and
+        (.manifest_hash | type == "string" and test("^[0-9a-f]{64}$")) and
+        (.recorded_at | type == "string" and length > 0)
+      ] | all) and
+      ([.history[].manifest] | length == (unique | length))
     ] | all)
   ' "$ledger" >/dev/null || return 1
   while IFS=$'\t' read -r manifest expected_hash; do
     [[ "$manifest" == /* && -f "$manifest" && "$(sha256_file "$manifest")" == "$expected_hash" ]] || return 1
-  done < <(jq -r '.boundaries[] | select(.last_manifest != "") | [.last_manifest, .last_manifest_hash] | @tsv' "$ledger")
+  done < <(jq -r '.boundaries[].history[] | [.manifest, .manifest_hash] | @tsv' "$ledger")
 }
 
 boundary_ledger_ready() {

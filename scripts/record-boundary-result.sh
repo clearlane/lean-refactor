@@ -97,6 +97,10 @@ jq -e --arg id "$boundary" '.boundaries | has($id)' "$ledger" >/dev/null || {
   echo "Error: boundary is not part of approved findings: $boundary" >&2
   exit 1
 }
+jq -e --arg manifest "$manifest" '[.boundaries[].history[].manifest] | index($manifest) == null' "$ledger" >/dev/null || {
+  echo "Error: boundary manifest path was already recorded and must remain immutable: $manifest" >&2
+  exit 1
+}
 existing_status=$(jq -r --arg id "$boundary" '.boundaries[$id].status' "$ledger")
 [[ "$existing_status" != blocked ]] || {
   echo "Error: boundary failure budget is exhausted: $boundary" >&2
@@ -140,7 +144,7 @@ jq --arg id "$boundary" --arg kind "$kind" --arg result "$result" \
     status: "pending", repair_attempts: 0, verification_failures: 0,
     repair_limit: 2, verification_limit: 2,
     repair_status: "pending", verification_status: "pending", last_result: "",
-    last_manifest: "", last_manifest_hash: "", recorded_at: ""
+    last_manifest: "", last_manifest_hash: "", recorded_at: "", history: []
   }) |
     .repair_attempts += $repair_increment |
     .verification_failures += $verification_increment |
@@ -148,6 +152,9 @@ jq --arg id "$boundary" --arg kind "$kind" --arg result "$result" \
     .last_manifest = $manifest |
     .last_manifest_hash = $manifest_hash |
     .recorded_at = $recorded_at |
+    .history += [{kind:$kind, result:$result,
+      attempt:(if $kind == "repair" then .repair_attempts else (.verification_failures + (if $result == "completed" or $result == "blocked" then 1 else 0 end)) end),
+      manifest:$manifest, manifest_hash:$manifest_hash, recorded_at:$recorded_at}] |
     (if $kind == "repair" then
       .repair_status = (if $result == "completed" then "completed"
         elif $result == "blocked" or .repair_attempts >= .repair_limit then "blocked"

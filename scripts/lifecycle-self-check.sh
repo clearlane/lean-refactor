@@ -52,7 +52,7 @@ write_boundary_manifest() {
       blocker: "", stale_dependents: []
     }' >"$file"
 }
-boundary_manifest="$tmp/boundary-result.json"
+boundary_manifest="$tmp/boundary-repair-1.json"
 write_boundary_manifest "$boundary_manifest" F1 1 completed
 jq '.changed_paths = ["outside.txt"]' "$boundary_manifest" >"$tmp/out-of-scope.json"
 if "$SCRIPT_DIR/workflow.sh" boundary "$state" --boundary F1 --kind repair --result completed --manifest "$tmp/out-of-scope.json" >/dev/null 2>&1; then exit 1; fi
@@ -62,15 +62,17 @@ write_boundary_manifest "$boundary_manifest" F1 1 retryable
 jq '.blocker = ""' "$boundary_manifest" >"$tmp/unexplained-failure.json"
 if "$SCRIPT_DIR/workflow.sh" boundary "$state" --boundary F1 --kind repair --result retryable --manifest "$tmp/unexplained-failure.json" >/dev/null 2>&1; then exit 1; fi
 jq '.blocker = "retry after repair evidence review"' "$boundary_manifest" >"$tmp/retryable.json"
-mv "$tmp/retryable.json" "$boundary_manifest"
+boundary_manifest="$tmp/retryable.json"
 if "$SCRIPT_DIR/record-boundary-result.sh" "$state" --boundary F2 --kind repair --result completed --manifest "$boundary_manifest" >/dev/null 2>&1; then exit 1; fi
 if "$SCRIPT_DIR/record-boundary-result.sh" "$state" --boundary F1 --kind verification --result completed --manifest "$boundary_manifest" >/dev/null 2>&1; then exit 1; fi
 "$SCRIPT_DIR/workflow.sh" boundary "$state" --boundary F1 --kind repair --result retryable --manifest "$boundary_manifest" >/dev/null
 if boundary_ledger_ready "$state"; then exit 1; fi
+boundary_manifest="$tmp/boundary-repair-2.json"
 write_boundary_manifest "$boundary_manifest" F1 2 completed
 "$SCRIPT_DIR/workflow.sh" boundary "$state" --boundary F1 --kind repair --result completed --manifest "$boundary_manifest" >/dev/null
 if boundary_ledger_ready "$state"; then exit 1; fi
 if "$SCRIPT_DIR/workflow.sh" boundary "$state" --boundary F1 --kind repair --result completed --manifest "$boundary_manifest" >/dev/null 2>&1; then exit 1; fi
+boundary_manifest="$tmp/boundary-verification-1.json"
 write_boundary_manifest "$boundary_manifest" F1 1 completed
 "$SCRIPT_DIR/workflow.sh" boundary "$state" --boundary F1 --kind verification --result completed --manifest "$boundary_manifest" >/dev/null
 if "$SCRIPT_DIR/workflow.sh" boundary "$state" --boundary F1 --kind verification --result completed --manifest "$boundary_manifest" >/dev/null 2>&1; then exit 1; fi
@@ -115,13 +117,15 @@ done
   --evidence "$tmp/classification" --classification "$tmp/classification" \
   --boundary-diff "$tmp/boundary" --state-impact "$tmp/state-impact" \
   --external-impact "$tmp/external-impact" --wave-manifest "$tmp/wave" >/dev/null
+boundary_manifest="$tmp/blocked-repair-1.json"
 write_boundary_manifest "$boundary_manifest" B1 1 failed
 jq '.blocker = "repair command failed"' "$boundary_manifest" >"$tmp/failed.json"
-mv "$tmp/failed.json" "$boundary_manifest"
+boundary_manifest="$tmp/failed.json"
 "$SCRIPT_DIR/workflow.sh" boundary "$blocked_state" --boundary B1 --kind repair --result failed --manifest "$boundary_manifest" >/dev/null
+boundary_manifest="$tmp/blocked-repair-2.json"
 write_boundary_manifest "$boundary_manifest" B1 2 failed
-jq '.blocker = "repair command failed again"' "$boundary_manifest" >"$tmp/failed.json"
-mv "$tmp/failed.json" "$boundary_manifest"
+jq '.blocker = "repair command failed again"' "$boundary_manifest" >"$tmp/failed-again.json"
+boundary_manifest="$tmp/failed-again.json"
 "$SCRIPT_DIR/workflow.sh" boundary "$blocked_state" --boundary B1 --kind repair --result failed --manifest "$boundary_manifest" >/dev/null
 if boundary_ledger_ready "$blocked_state"; then exit 1; fi
 if "$SCRIPT_DIR/workflow.sh" boundary "$blocked_state" --boundary B1 --kind repair --result completed --manifest "$boundary_manifest" >/dev/null 2>&1; then exit 1; fi

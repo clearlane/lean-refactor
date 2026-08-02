@@ -74,7 +74,7 @@ jq --arg findings "$findings" '
     status: "pending", repair_attempts: 0, verification_failures: 0,
     repair_limit: 2, verification_limit: 2,
     repair_status: "pending", verification_status: "pending", last_result: "",
-    last_manifest: "", last_manifest_hash: "", recorded_at: ""
+    last_manifest: "", last_manifest_hash: "", recorded_at: "", history: []
   }}) | from_entries)
 ' "$ledger" >"$next_ledger"
 update_field "$next" boundary_ledger_hash "$(sha256_file "$next_ledger")"
