@@ -56,17 +56,31 @@ jq -e --arg boundary "$boundary" --arg result "$result" '
   (.branch_worktree | type == "string" and length > 0) and
   (.base_fingerprint | type == "string" and length > 0) and
   (.diff_fingerprint | type == "string" and length > 0) and
-  (.allowed_paths | type == "array" and all(.[]; type == "string")) and
-  (.changed_paths | type == "array" and all(.[]; type == "string")) and
+  (.allowed_paths | type == "array" and length > 0 and
+    length == (unique | length) and all(.[];
+      type == "string" and length > 0 and
+      (startswith("/") | not) and
+      (split("/") | all(.[]; length > 0 and . != "." and . != "..")))) and
+  (.changed_paths | type == "array" and length == (unique | length) and all(.[];
+    type == "string" and length > 0 and
+    (startswith("/") | not) and
+    (split("/") | all(.[]; length > 0 and . != "." and . != "..")))) and
+  ((.changed_paths - .allowed_paths) | length == 0) and
   (.commands | type == "array" and all(.[];
     (.command | type == "string" and length > 0) and
-    (.exit_code | type == "number") and
-    (.evidence | type == "string"))) and
+    (.exit_code | type == "number" and floor == .) and
+    (.evidence | type == "string" and length > 0))) and
   (.evidence_artifacts | type == "array" and all(.[];
     (.path | type == "string" and startswith("/")) and
     (.sha256 | type == "string" and test("^[0-9a-fA-F]{64}$")))) and
   (.blocker | type == "string") and
-  (.stale_dependents | type == "array" and all(.[]; type == "string"))
+  (.stale_dependents | type == "array" and length == (unique | length) and
+    all(.[]; type == "string" and test("^[A-Za-z0-9._-]+$"))) and
+  (if $result == "completed" then
+    (.commands | length > 0 and all(.[]; .exit_code == 0)) and .blocker == ""
+   else
+    (.evidence_artifacts | length > 0) and (.blocker | length > 0)
+   end)
 ' "$manifest" >/dev/null || {
   echo "Error: boundary manifest does not satisfy the required JSON contract" >&2
   exit 64
