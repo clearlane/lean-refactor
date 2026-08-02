@@ -1,10 +1,10 @@
 #!/bin/bash
 
-readonly COMPOUND_STATE_SCHEMA_VERSION=5
+readonly COMPOUND_STATE_SCHEMA_VERSION=6
 readonly COMPOUND_STATE_PREFIX="lean-refactor."
 readonly COMPOUND_STATE_SUFFIX=".local.md"
-readonly COMPOUND_STATE_FIELDS="schema_version session_id iteration max_iterations tier_floor mode root_path scope_path baseline_commit audit_file audit_hash approval_status approval_digest approval_recorded_at approved_findings approved_tier approval_exclusions repository_fingerprint baseline_result_artifact baseline_result_hash reference_inventory_artifact reference_inventory_hash evidence_artifact evidence_hash classification_artifact classification_hash boundary_diff_artifact boundary_diff_hash state_impact_artifact state_impact_hash external_impact_artifact external_impact_hash boundary_ledger boundary_ledger_hash current_signature previous_signature expected_wave_manifest expected_wave_manifest_hash expected_wave_status failure_count failure_limit last_failure"
-readonly COMPOUND_OPTIONAL_FIELDS="audit_file audit_hash approval_digest approval_recorded_at approved_findings approved_tier approval_exclusions repository_fingerprint baseline_result_artifact baseline_result_hash reference_inventory_artifact reference_inventory_hash evidence_artifact evidence_hash classification_artifact classification_hash boundary_diff_artifact boundary_diff_hash state_impact_artifact state_impact_hash external_impact_artifact external_impact_hash current_signature previous_signature expected_wave_manifest expected_wave_manifest_hash expected_wave_status last_failure"
+readonly COMPOUND_STATE_FIELDS="schema_version session_id phase iteration max_iterations tier_floor mode root_path scope_path baseline_commit audit_file audit_hash approval_status approval_digest approval_recorded_at approver approval_conditions approved_findings approved_tier approval_exclusions repository_fingerprint baseline_result_artifact baseline_result_hash reference_inventory_artifact reference_inventory_hash evidence_artifact evidence_hash classification_artifact classification_hash boundary_diff_artifact boundary_diff_hash state_impact_artifact state_impact_hash external_impact_artifact external_impact_hash boundary_ledger boundary_ledger_hash current_signature previous_signature expected_wave_manifest expected_wave_manifest_hash expected_wave_status failure_count failure_limit last_failure"
+readonly COMPOUND_OPTIONAL_FIELDS="audit_file audit_hash approval_digest approval_recorded_at approver approval_conditions approved_findings approved_tier approval_exclusions repository_fingerprint baseline_result_artifact baseline_result_hash reference_inventory_artifact reference_inventory_hash evidence_artifact evidence_hash classification_artifact classification_hash boundary_diff_artifact boundary_diff_hash state_impact_artifact state_impact_hash external_impact_artifact external_impact_hash current_signature previous_signature expected_wave_manifest expected_wave_manifest_hash expected_wave_status last_failure"
 
 parse_field() {
   local file="$1" key="$2"
@@ -63,6 +63,7 @@ write_state() {
 ---
 schema_version: "$COMPOUND_STATE_SCHEMA_VERSION"
 session_id: "$session_id"
+phase: "discovery"
 iteration: "1"
 max_iterations: "$max_iterations"
 tier_floor: "$tier_floor"
@@ -75,6 +76,8 @@ audit_hash: ""
 approval_status: "pending"
 approval_digest: ""
 approval_recorded_at: ""
+approver: ""
+approval_conditions: ""
 approved_findings: ""
 approved_tier: ""
 approval_exclusions: ""
@@ -123,6 +126,7 @@ validate_state() {
   [[ "$(parse_field "$file" iteration)" =~ ^[1-9][0-9]*$ && "$(parse_field "$file" max_iterations)" =~ ^[1-9][0-9]*$ ]] || return 1
   [[ "$(parse_field "$file" tier_floor)" =~ ^[1-4]$ && "$(parse_field "$file" failure_count)" =~ ^[0-9]+$ && "$(parse_field "$file" failure_limit)" =~ ^[1-9][0-9]*$ ]] || return 1
   [[ "$(parse_field "$file" failure_limit)" == 2 ]] || return 1
+  [[ "$(parse_field "$file" phase)" =~ ^(discovery|approved|repair|verification|rediscovery|blocked)$ ]] || return 1
   [[ "$(parse_field "$file" mode)" =~ ^(git|code-only)$ && "$(parse_field "$file" approval_status)" =~ ^(pending|approved|revoked)$ ]] || return 1
   root=$(parse_field "$file" root_path)
   scope=$(parse_field "$file" scope_path)
@@ -217,14 +221,14 @@ validate_wave() {
 
 approval_digest_for_state() {
   local file="$1"
-  canonical_digest "$(parse_field "$file" session_id)" "$(parse_field "$file" scope_path)" "$(parse_field "$file" audit_file)" "$(parse_field "$file" approved_findings)" "$(parse_field "$file" approved_tier)" "$(parse_field "$file" approval_exclusions)" "$(parse_field "$file" approval_recorded_at)" "$(parse_field "$file" repository_fingerprint)" "$(parse_field "$file" baseline_result_hash)" "$(parse_field "$file" reference_inventory_hash)" "$(parse_field "$file" evidence_hash)" "$(parse_field "$file" classification_hash)" "$(parse_field "$file" boundary_diff_hash)" "$(parse_field "$file" state_impact_hash)" "$(parse_field "$file" external_impact_hash)"
+  canonical_digest "$(parse_field "$file" session_id)" "$(parse_field "$file" scope_path)" "$(parse_field "$file" audit_file)" "$(parse_field "$file" approver)" "$(parse_field "$file" approval_conditions)" "$(parse_field "$file" approved_findings)" "$(parse_field "$file" approved_tier)" "$(parse_field "$file" approval_exclusions)" "$(parse_field "$file" approval_recorded_at)" "$(parse_field "$file" repository_fingerprint)" "$(parse_field "$file" baseline_result_hash)" "$(parse_field "$file" reference_inventory_hash)" "$(parse_field "$file" evidence_hash)" "$(parse_field "$file" classification_hash)" "$(parse_field "$file" boundary_diff_hash)" "$(parse_field "$file" state_impact_hash)" "$(parse_field "$file" external_impact_hash)"
 }
 
 validate_approval_envelope() {
   local file="$1" key expected
   validate_state "$file" || return 1
   [[ "$(parse_field "$file" approval_status)" == approved ]] || return 1
-  for key in audit_file audit_hash approval_digest approval_recorded_at approved_findings approved_tier repository_fingerprint baseline_result_artifact baseline_result_hash reference_inventory_artifact reference_inventory_hash evidence_artifact evidence_hash classification_artifact classification_hash boundary_diff_artifact boundary_diff_hash state_impact_artifact state_impact_hash external_impact_artifact external_impact_hash; do [[ -n "$(parse_field "$file" "$key")" ]] || return 1; done
+  for key in audit_file audit_hash approval_digest approval_recorded_at approver approved_findings approved_tier repository_fingerprint baseline_result_artifact baseline_result_hash reference_inventory_artifact reference_inventory_hash evidence_artifact evidence_hash classification_artifact classification_hash boundary_diff_artifact boundary_diff_hash state_impact_artifact state_impact_hash external_impact_artifact external_impact_hash; do [[ -n "$(parse_field "$file" "$key")" ]] || return 1; done
   [[ "$(parse_field "$file" audit_file)" == /* && -f "$(parse_field "$file" audit_file)" ]] || return 1
   validate_artifact "$file" baseline_result_artifact baseline_result_hash || return 1
   validate_artifact "$file" reference_inventory_artifact reference_inventory_hash || return 1

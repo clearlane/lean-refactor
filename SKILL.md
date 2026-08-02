@@ -7,7 +7,13 @@ description: Finds and fixes compounding SSOT/DRY opportunities through evidence
 
 Surface and eliminate SSOT (Single Source of Truth) and DRY violations across an entire codebase, prioritising **compound** opportunities — places where one consolidation ripples improvements across many call sites, files, or modules.
 
-The skill is **agent-native**: discovery and repair fan out through specialised compound-engineering subagents in parallel, findings persist to disk so they survive context boundaries, and every git operation delegates to the corresponding `/ce-*` skill so commits and PRs follow project conventions.
+The skill uses an executable lifecycle coordinator for durable phase, approval, boundary, retry, and resume state. Discovery and repair may fan out through specialised workers; findings and evidence persist outside conversation context.
+
+## Coordinator Entry
+
+For mutating or resumable runs, invoke `scripts/workflow.sh init [SCOPE] [--max-iterations N] [--tier-floor 1|2|3|4] [--code-only]`. Keep the returned state path and use only the coordinator commands `approve`, `verify-approval`, `boundary`, `finalize`, `status`, and `cancel` for workflow transitions. The scripts validate transition order and own mutable workflow state; workers return evidence and never edit it.
+
+Read `references/methodology.md` for discovery through integration procedure, `references/iterative-loop.md` for state and resume contracts, and `references/repair-agent-prompt.md` when delegating one approved atomic repair.
 
 ## Prerequisites
 
@@ -105,7 +111,7 @@ Deletions, security-related findings, state-bound changes, applied/new migration
 
 Persist approval in state with approver, timestamp, exact finding IDs/boundaries, approved tier, commit/tree fingerprint, and conditions. Bind approval digest to immutable approval inputs and their artifact hashes, not the mutable audit hash. The audit path remains bound and must exist; mutable execution metadata may append without invalidating approval. Approval expires when scope, approved IDs/tier/exclusions, evidence classification, boundary diff, baseline result, reference inventory, state/external impact, or repository fingerprint changes; return to Phase 5.
 
-Set and persist per-boundary repair-attempt and verification-failure counters with limits, default `2` each; increment on every wave attempt/failure. Every failed wave writes manifest of boundary ID, attempt number, branch/worktree, base/diff fingerprints, allowed and changed paths, commands, raw evidence artifacts/hashes, status, blocker, and stale dependents. On exhaustion, stop boundary, preserve evidence, mark `blocked`, and request re-plan or fresh approval. Never weaken tests or gates to fit budget.
+Record every repair and verification outcome through `scripts/workflow.sh boundary`, which owns the durable per-boundary repair-attempt and verification-failure counters, their default limit of `2` each, and the `pending`/`completed`/`blocked` status. Every failed wave writes a manifest of boundary ID, attempt number, branch/worktree, base/diff fingerprints, allowed and changed paths, commands, raw evidence artifacts/hashes, status, blocker, and stale dependents; the coordinator binds that manifest by hash. On exhaustion the boundary becomes `blocked`, evidence is preserved, and the run requires re-plan or fresh approval. Never weaken tests or gates to fit budget.
 
 ## Workflow
 
@@ -117,8 +123,8 @@ In `read-only discovery`, perform full discovery and return a complete inline au
 
 For mutating `git-backed` targets:
 1. Run `git status --short`, `git diff --stat HEAD`, and record HEAD/tree fingerprint.
-2. If dirty, stop. Show affected paths and overlap risk. Continue only after explicit user choice: preserve WIP and proceed, stash, or commit via `/ce-commit`. Never commit or stash without that consent.
-3. Persist choice and fingerprint. Dirty-tree consent does not waive per-boundary isolation or review.
+2. If dirty, stop. Show affected paths and overlap risk. Iterative Git mode remains clean-only: continue from a clean dedicated worktree after the user independently commits or stashes, or explicitly choose non-Git `--code-only` isolation. Never commit or stash without user authorization.
+3. Persist the clean baseline fingerprint. Code-only choice does not waive per-boundary isolation or review.
 
 For mutating `code-only` targets, record absence of Git guarantees plus file-hash or equivalent snapshot used for freshness and rollback.
 
@@ -289,7 +295,7 @@ Optionally chain `/ce-compound-refresh` to audit existing `docs/solutions/` for 
 
 ### Phase 9: Update the Audit File
 
-Mark resolved findings in the audit file. For findings deferred to a later run, leave them in place with a `Status: deferred` annotation. Append machine lifecycle fields only through `scripts/record-wave.sh`; duplicate keys are append-only and the last exact `compound_<key>:` line wins. The audit file becomes the canonical record for that scope.
+Mark resolved findings in the audit file. For findings deferred to a later run, leave them in place with a `Status: deferred` annotation. Append machine lifecycle fields only through `scripts/workflow.sh finalize`; duplicate keys are append-only and the last exact `compound_<key>:` line wins. The audit file becomes the canonical record for that scope.
 
 In Git mode, commit the audit alone as a dedicated metadata boundary through `/ce-commit` when that command is callable, or native Git fallback after the same clean-index and allowlist checks. Do not leave an unexplained dirty audit. The metadata commit is separate from repair boundaries and appears in the final tally.
 
@@ -315,14 +321,14 @@ For Tier 4 findings escalated out of this run, hand off to `/ce-plan`.
 
 ## Iterative Loop
 
-From repo root, setup exactly: `scripts/setup-loop.sh [SCOPE] [--max-iterations N] [--tier-floor 1|2|3|4] [--code-only]`; capture printed `Session ID` and state path, then invoke `/lean-refactor [SCOPE] [--max-iterations N] [--tier-floor 1|2|3|4]`. Iteration writes `.claude/lean-refactor.<session-id>.local.md` and defaults to `max-iterations=10`, `tier-floor=2`. After approval, `record-approval.sh` leaves the expected wave `pending`. After repair and verification, finalize it only through `scripts/record-wave.sh`; no manual state edits are supported. Continuation is active only when Claude Code settings register the executable command `<absolute-skill-path>/scripts/stop-hook.sh` as a `Stop` hook and pass standard hook JSON on stdin; setup does not register this hook. Without that registration, run is single-turn and must not claim iterative continuation.
+From repo root, initialize through `scripts/workflow.sh init [SCOPE] [--max-iterations N] [--tier-floor 1|2|3|4] [--code-only]`; capture the printed session and state paths. Use the same coordinator for approval, boundary results, finalization, status, and cancellation. Iteration writes `.claude/lean-refactor.<session-id>.local.md` plus its boundary ledger and defaults to `max-iterations=10`, `tier-floor=2`. Continuation is active only when the host adapter registers `scripts/stop-hook.sh` at its stop lifecycle boundary and supplies the documented JSON payload. Setup does not register the adapter. Without it, the run is single-turn and must not claim automatic continuation.
 
 Two whole-line markers stop the loop (nothing else does):
 
 - `<lean-refactor-complete>` — re-discovery returned 0 findings at or below the tier floor
 - `<lean-refactor-stuck>` — findings identical to the previous iteration; halt and surface
 
-Cancel exactly from repo root: `scripts/cancel-loop.sh --root "$(pwd)" <SESSION_ID>` — removes valid session state and preserves source changes. A `/cancel-lean-refactor` wrapper is valid only if separately registered to run that exact contract.
+Cancel from repo root through `scripts/workflow.sh cancel --root "$(pwd)" <SESSION_ID>` — removes valid session state and preserves source changes. A host command wrapper is valid only if separately registered to run that exact coordinator contract.
 
 Full state-file schema, hook decision logic, re-entrance handling, and rationalisations-to-reject live in `references/iterative-loop.md`.
 
@@ -377,13 +383,12 @@ DO:
 
 ### Scripts
 
-- **`scripts/setup-loop.sh`** — Initialise the iterative-loop state file and create session state
-- **`scripts/record-approval.sh`** — Atomically bind approval inputs and create a pending expected wave
-- **`scripts/record-wave.sh`** — Atomically finalize a pending wave and append canonical machine audit fields
+- **`scripts/workflow.sh`** — Public coordinator entry for lifecycle initialization, approval, boundary outcomes, finalization, status, and cancellation
+- **`scripts/setup-loop.sh`**, **`record-approval.sh`**, **`record-boundary-result.sh`**, **`record-wave.sh`** — Coordinator implementation adapters; invoke through `workflow.sh`
 - **`scripts/stop-hook.sh`** — Stop-hook entry point; decides whether to re-enter the loop
-- **`scripts/cancel-loop.sh`** — Cancel an in-flight loop session, preserving file changes
+- **`scripts/cancel-loop.sh`** — Internal cancellation adapter used by `workflow.sh`
 - **`scripts/lib.sh`** — Shared state-file field parsing, sourced by the other scripts (not invoked directly)
 - **`scripts/stage-findings.sh`** — Assemble the raw agent reports into one concatenated file for the orchestrator to dedupe and rank
 - **`scripts/file-findings.sh`** — Create a new audit scaffold in `docs/audits/` from the canonical template
 
-Iterative continuation needs `stop-hook.sh` registered as the Stop hook. `cancel-loop.sh` runs directly and preserves file changes.
+Iterative continuation needs `stop-hook.sh` registered at the host stop boundary. Cancellation runs through `workflow.sh cancel` and preserves file changes.

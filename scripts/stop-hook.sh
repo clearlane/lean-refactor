@@ -60,7 +60,8 @@ grep -qx '<lean-refactor-complete>' <<<"$last_output" && marker=complete
 grep -qx '<lean-refactor-stuck>' <<<"$last_output" && marker=stuck
 if [[ -n "$marker" ]]; then
   if validate_terminal_audit "$matching" "$marker"; then
-    rm -f "$matching"
+    ledger=$(parse_field "$matching" boundary_ledger)
+    rm -f "$matching" "$ledger"
     exit 0
   fi
   increment_failure "$matching" "unsupported $marker marker" || true
@@ -81,5 +82,6 @@ next=$((iteration + 1))
 update_field "$matching" iteration "$next"
 update_field "$matching" failure_count 0
 update_field "$matching" last_failure ""
+update_field "$matching" phase rediscovery
 reason="Resume canonical lean-refactor workflow from SKILL.md. State: $matching; root: $root; scope: $scope; audit: ${audit:-unset}; iteration: $next/$max_iterations; tier floor: $tier; approval: $approval. Validate persisted approval, expected-wave status, signatures, and evidence before repair."
 jq -n --arg reason "$reason" --arg message "Lean-Refactor $next/$max_iterations | $session_id" '{decision:"block",reason:$reason,systemMessage:$message}'

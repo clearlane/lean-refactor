@@ -16,7 +16,7 @@ execution_mode: read-only-discovery | mutating
 repository_mode: git-backed | non-git-code-only
 persistence: durable:<path> | blocked:<reason>
 baseline_fingerprint: <HEAD/tree or snapshot hashes>
-dirty_tree_decision: clean | preserve-with-explicit-consent | stashed | committed
+dirty_tree_decision: clean | user-stashed-before-init | user-committed-before-init | code-only-explicit
 agents_dispatched:
   - ce-learnings-researcher # completed first
   - <parallel layer reviewers>
@@ -173,7 +173,7 @@ Findings that require larger structural decisions or design discussion. Each ent
 
 ## Machine lifecycle records
 
-Append records only through `scripts/record-wave.sh`. Never rewrite older records. Parser accepts exact `compound_<key>:` names and uses last exact duplicate.
+Append records only through `scripts/workflow.sh finalize`. Never rewrite older records. Parser accepts exact `compound_<key>:` names and uses last exact duplicate.
 
 ```text
 compound_iteration: <current integer>

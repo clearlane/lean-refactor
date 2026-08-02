@@ -22,7 +22,7 @@ BASELINE_EVIDENCE: {{COMMANDS_RESULTS_AND_RAW_ARTIFACT_HASHES}}
 
 Before editing:
 1. Read confirmed findings and complete evidence surfaces from audit file.
-2. Run `scripts/verify-approval.sh "$STATE_FILE"` from the skill root immediately before editing. STOP if it fails or its emitted digest differs from `APPROVAL_DIGEST`. The coordinator, not the worker, owns approval digest construction and repository-fingerprint validation.
+2. Run `scripts/workflow.sh verify-approval "$STATE_FILE"` from the skill root immediately before editing. STOP if it fails or its emitted digest differs from `APPROVAL_DIGEST`. The coordinator, not the worker, owns approval digest construction and repository-fingerprint validation.
 3. In Git mode, verify WORKTREE_PATH is dedicated, BRANCH is named and based on BASELINE_COMMIT, HEAD is not detached, index/tree are clean, and ALLOWED_PATHS exactly cover boundary while excluding audit file. Never repair in integration/primary checkout. In code-only mode, verify recorded mode and isolated scope.
 4. Re-run narrow baseline checks. Preserve command, exit code, and full output or durable artifact path plus hash.
 5. Prove targeted test sensitivity by introducing/simulating assigned defect, capturing expected failure, restoring baseline, and capturing pass before repair. Never delete, weaken, skip, or rewrite tests merely to make repair pass.
@@ -40,7 +40,7 @@ After editing:
 - Record baseline and post evidence side by side, including command, exit code, and raw artifact/hash.
 - Confirm changed/staged paths match allowlist and index is clean after orchestrator-controlled staging reset; do not commit.
 - Confirm no protected test was removed, weakened, skipped, or made less specific.
-- Return files changed, line delta, behavior, evidence, remaining unknowns, and recovery instruction. On failure, return the failed-wave manifest required by SKILL.md. The coordinator records the outcome and increments durable counters through `scripts/record-boundary-result.sh`; workers never edit workflow state.
+- Return files changed, line delta, behavior, evidence, remaining unknowns, and recovery instruction. On failure, return the failed-wave manifest required by SKILL.md. The coordinator records the outcome and increments durable counters through `scripts/workflow.sh boundary`; workers never edit workflow state.
 
 STOP without edits, or stop at safest reversible point, when:
 - finding is not confirmed or current reference surface differs from audit evidence

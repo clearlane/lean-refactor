@@ -36,6 +36,10 @@ validate_state "$state" || {
   echo "Error: invalid state: $state" >&2
   exit 1
 }
+[[ "$(parse_field "$state" phase)" =~ ^(approved|repair|verification)$ ]] || {
+  echo "Error: boundary results require approved workflow state" >&2
+  exit 1
+}
 [[ "$boundary" =~ ^[A-Za-z0-9._-]+$ && "$kind" =~ ^(repair|verification)$ && "$result" =~ ^(completed|retryable|failed|blocked)$ ]] || {
   usage
   exit 64
@@ -46,6 +50,21 @@ validate_state "$state" || {
 }
 
 ledger=$(parse_field "$state" boundary_ledger)
+jq -e --arg id "$boundary" '.boundaries | has($id)' "$ledger" >/dev/null || {
+  echo "Error: boundary is not part of approved findings: $boundary" >&2
+  exit 1
+}
+existing_status=$(jq -r --arg id "$boundary" '.boundaries[$id].status' "$ledger")
+[[ "$existing_status" != blocked ]] || {
+  echo "Error: boundary failure budget is exhausted: $boundary" >&2
+  exit 1
+}
+if [[ "$kind" == verification ]]; then
+  [[ "$(jq -r --arg id "$boundary" '.boundaries[$id].repair_status' "$ledger")" == completed ]] || {
+    echo "Error: verification requires completed repair: $boundary" >&2
+    exit 1
+  }
+fi
 next_ledger="${ledger}.tmp.$$"
 next_state="${state}.tmp.$$"
 backup_ledger="${ledger}.bak.$$"
@@ -88,6 +107,7 @@ jq --arg id "$boundary" --arg kind "$kind" --arg result "$result" \
 
 cp "$state" "$next_state"
 update_field "$next_state" boundary_ledger_hash "$(sha256_file "$next_ledger")"
+if [[ "$kind" == repair ]]; then update_field "$next_state" phase repair; else update_field "$next_state" phase verification; fi
 cp "$ledger" "$backup_ledger"
 mv "$next_ledger" "$ledger"
 COMPOUND_STATE_CANONICAL_PATH="$state" validate_boundary_ledger "$next_state" || {

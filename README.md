@@ -33,13 +33,13 @@ Invoke with a repository or scoped directory:
 /lean-refactor [SCOPE] [--max-iterations N] [--tier-floor 1|2|3|4] [--code-only]
 ```
 
-For iterative runs, first execute:
+For iterative runs, use the coordinator entrypoint:
 
 ```sh
-scripts/setup-loop.sh [SCOPE] [--max-iterations N] [--tier-floor 1|2|3|4] [--code-only]
+scripts/workflow.sh init [SCOPE] [--max-iterations N] [--tier-floor 1|2|3|4] [--code-only]
 ```
 
-Setup writes local state, but doesn't register the continuation hook. Register the absolute path to `scripts/stop-hook.sh` as a Claude Code `Stop` hook and pass standard hook JSON on stdin. Without that hook, runs are single-turn and must not claim automatic continuation.
+The coordinator writes local state and a per-boundary ledger. Use its `approve`, `verify-approval`, `boundary`, `finalize`, `status`, and `cancel` commands for transitions. Initialization doesn't register the continuation adapter; when the host supports stop hooks, register the absolute path to `scripts/stop-hook.sh` and pass its documented JSON input. Without that adapter, runs are single-turn and must not claim automatic continuation.
 
 ## Vendored skill pinning
 

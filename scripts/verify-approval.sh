@@ -15,6 +15,8 @@ validate_approval "$state" || {
 }
 
 printf 'approval_digest=%s\n' "$(parse_field "$state" approval_digest)"
+printf 'approver=%s\n' "$(parse_field "$state" approver)"
+printf 'approval_conditions=%s\n' "$(parse_field "$state" approval_conditions)"
 printf 'approved_findings=%s\n' "$(parse_field "$state" approved_findings)"
 printf 'approved_tier=%s\n' "$(parse_field "$state" approved_tier)"
 printf 'approval_exclusions=%s\n' "$(parse_field "$state" approval_exclusions)"

@@ -55,6 +55,10 @@ validate_approval_envelope "$state" || {
   echo "Error: approval envelope is invalid" >&2
   exit 1
 }
+[[ "$(parse_field "$state" phase)" =~ ^(approved|repair|verification)$ ]] || {
+  echo "Error: wave finalization is not valid in current phase" >&2
+  exit 1
+}
 boundary_ledger_ready "$state" || {
   echo "Error: one or more boundary results remain pending or invalid" >&2
   exit 1
@@ -78,6 +82,7 @@ cp "$audit" "$next_audit"
 update_field "$next_state" current_signature "$current"
 update_field "$next_state" previous_signature "$previous"
 update_field "$next_state" expected_wave_status complete
+update_field "$next_state" phase rediscovery
 update_field "$next_state" audit_hash "$(sha256_file "$next_audit")"
 COMPOUND_STATE_CANONICAL_PATH="$state" validate_state "$next_state" || {
   echo "Error: finalized state failed validation" >&2

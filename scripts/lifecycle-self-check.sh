@@ -14,7 +14,7 @@ printf '# Audit\n' >"$audit"
 for artifact in baseline refs evidence classification boundary state-impact external-impact wave; do
   printf '%s\n' "$artifact" >"$tmp/$artifact"
 done
-"$SCRIPT_DIR/record-approval.sh" "$state" "$audit" --findings F1 --tier 1 \
+"$SCRIPT_DIR/record-approval.sh" "$state" "$audit" --approver tester --conditions none --findings F1 --tier 1 \
   --baseline-result "$tmp/baseline" --reference-inventory "$tmp/refs" \
   --evidence "$tmp/evidence" --classification "$tmp/classification" \
   --boundary-diff "$tmp/boundary" --state-impact "$tmp/state-impact" \
@@ -26,6 +26,8 @@ if validate_approval "$state"; then exit 1; fi
 validate_approval_envelope "$state"
 boundary_manifest="$tmp/boundary-result"
 printf 'boundary attempt\n' >"$boundary_manifest"
+if "$SCRIPT_DIR/record-boundary-result.sh" "$state" --boundary F2 --kind repair --result completed --manifest "$boundary_manifest" >/dev/null 2>&1; then exit 1; fi
+if "$SCRIPT_DIR/record-boundary-result.sh" "$state" --boundary F1 --kind verification --result completed --manifest "$boundary_manifest" >/dev/null 2>&1; then exit 1; fi
 "$SCRIPT_DIR/record-boundary-result.sh" "$state" --boundary F1 --kind repair --result retryable --manifest "$boundary_manifest" >/dev/null
 if boundary_ledger_ready "$state"; then exit 1; fi
 "$SCRIPT_DIR/record-boundary-result.sh" "$state" --boundary F1 --kind repair --result completed --manifest "$boundary_manifest" >/dev/null
