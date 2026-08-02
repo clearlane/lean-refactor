@@ -3,6 +3,14 @@
 readonly LEAN_STATE_SCHEMA_VERSION=8
 readonly LEAN_STATE_PREFIX="lean-refactor."
 readonly LEAN_STATE_SUFFIX=".local.md"
+# Host-owned state directory name, relative to the resolved root. Hosts that do
+# not use `.claude` override it; the default keeps existing runs discoverable.
+LEAN_STATE_DIRNAME="${LEAN_REFACTOR_STATE_DIR:-.claude}"
+[[ "$LEAN_STATE_DIRNAME" =~ ^[A-Za-z0-9._-]+$ ]] || {
+  echo "Error: LEAN_REFACTOR_STATE_DIR must be a single safe path segment." >&2
+  exit 1
+}
+readonly LEAN_STATE_DIRNAME
 readonly LEAN_STATE_FIELDS="schema_version session_id phase iteration max_iterations tier_floor mode root_path scope_path baseline_commit audit_file audit_hash approval_status approval_digest approval_recorded_at approver approval_conditions approved_findings approved_tier approval_exclusions repository_fingerprint baseline_result_artifact baseline_result_hash reference_inventory_artifact reference_inventory_hash evidence_artifact evidence_hash classification_artifact classification_hash boundary_diff_artifact boundary_diff_hash state_impact_artifact state_impact_hash external_impact_artifact external_impact_hash discovery_ledger discovery_ledger_hash boundary_ledger boundary_ledger_hash current_signature previous_signature expected_wave_manifest expected_wave_manifest_hash expected_wave_status failure_count failure_limit last_failure"
 readonly LEAN_OPTIONAL_FIELDS="audit_file audit_hash approval_digest approval_recorded_at approver approval_conditions approved_findings approved_tier approval_exclusions repository_fingerprint baseline_result_artifact baseline_result_hash reference_inventory_artifact reference_inventory_hash evidence_artifact evidence_hash classification_artifact classification_hash boundary_diff_artifact boundary_diff_hash state_impact_artifact state_impact_hash external_impact_artifact external_impact_hash current_signature previous_signature expected_wave_manifest expected_wave_manifest_hash expected_wave_status last_failure"
 LEAN_STATE_LOCK=""
@@ -72,7 +80,7 @@ resolve_root() {
     return 2
   fi
 }
-state_dir() { printf '%s/.claude\n' "$1"; }
+state_dir() { printf '%s/%s\n' "$1" "$LEAN_STATE_DIRNAME"; }
 state_path() { printf '%s/%s%s%s\n' "$(state_dir "$1")" "$LEAN_STATE_PREFIX" "$2" "$LEAN_STATE_SUFFIX"; }
 extract_session_id() {
   local name
@@ -354,13 +362,13 @@ repository_fingerprint() {
       tracked=$(git -C "$root" diff --binary HEAD | sha256_stream) || return 1
     fi
     untracked=$(git -C "$root" ls-files --others --exclude-standard -z | while IFS= read -r -d '' path; do
-      [[ "$path" == .claude/lean-refactor.* || "$path" == "$excluded_rel" ]] && continue
+      [[ "$path" == "$LEAN_STATE_DIRNAME"/"$LEAN_STATE_PREFIX"* || "$path" == "$excluded_rel" ]] && continue
       printf '%s\0' "$path"
       sha256_file "$root/$path"
     done | sha256_stream) || return 1
     canonical_digest "$head" "$tree" "$tracked" "$untracked"
   else
-    (cd "$root" && { find . -type f ! -path './.claude/lean-refactor.*' -print0 | LC_ALL=C sort -z | while IFS= read -r -d '' path; do
+    (cd "$root" && { find . -type f ! -path "./$LEAN_STATE_DIRNAME/$LEAN_STATE_PREFIX*" -print0 | LC_ALL=C sort -z | while IFS= read -r -d '' path; do
       [[ "$root/${path#./}" == "$excluded" ]] && continue
       printf '%s\0' "$path"
       sha256_file "$path"

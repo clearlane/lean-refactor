@@ -12,6 +12,10 @@ Don't use it for single-file cleanup, one-function bug fixes, new features, or c
 
 Optional discovery accelerators are CodeGraph, `scc`, `jscpd`/`cpd`, and `ast-grep`. The skill feature-detects them; they are not required for correctness or resumability.
 
+Durable run state is written to `<root>/.claude/` by default. Hosts that use a
+different convention set `LEAN_REFACTOR_STATE_DIR` to a single path segment
+before invoking the coordinator; keep it stable for the life of a run.
+
 Development checks additionally use Bats and `check-jsonschema`. Runtime paths retain portable smoke-test and `jq` validation fallbacks; CI sets `LEAN_REFACTOR_STRICT_SCHEMA=1` to run full JSON Schema validation. Set `LEAN_REFACTOR_USE_YQ=1` to opt into structural YAML front-matter reads and updates when `yq` is available.
 
 Missing specialist capabilities have documented fallbacks in [`SKILL.md`](SKILL.md). Discovery can use general-purpose workers with prompts from `references/worker-discovery.md`. Git, worktree, review, planning, and pattern write-up steps can use native tools or the listed manual paths.
@@ -54,9 +58,11 @@ Use `--run-cpd` to include a compact clone-candidate report when `jscpd`/`cpd` i
 
 The frame reuses a ready CodeGraph index and records any available `scc`, CPD, and `ast-grep` implementations. Pass `--init-codegraph` only when creating or updating the local `.codegraph/` index is explicitly intended.
 
-## Vendored skill pinning
+## Attribution
 
-`skills-lock.json` records each vendored skill with a `computedHash`. Verify integrity by recomputing that hash against the vendored source rather than trusting the `ref` alone. The `Plugin Structure` entry still tracks `ref: main`, so its upstream content can move; pin it to an immutable commit SHA once that SHA is verified against the recorded hash.
+Skill packaging conventions draw on the `plugin-structure` skill from
+[anthropics/claude-code](https://github.com/anthropics/claude-code). No upstream
+file is vendored into this repository, so there is nothing to pin or hash-verify.
 
 ## Safety
 
@@ -64,14 +70,16 @@ The skill requires a trusted checkout and explicit scope. It checks repository s
 
 ## Checks
 
+Run the complete check list through one entrypoint:
+
 ```sh
-bash -n scripts/*.sh
-shellcheck -S warning scripts/*.sh
-shfmt -d -i 2 -ci scripts/*.sh tests/*.bats
-bash scripts/names.sh
-bash scripts/lifecycle-check.sh
-check-jsonschema --schemafile schemas/repo-frame.schema.json /tmp/repo-frame.json
+bash scripts/check.sh
 ```
+
+It runs shell syntax, ShellCheck, `shfmt`, the filename convention, the Bats
+lifecycle suite, and schema plus repository-frame validation. Missing optional
+checkers are reported as `skip` locally. CI runs `scripts/check.sh --strict`,
+which requires every checker and enables full JSON Schema validation.
 
 ## License
 

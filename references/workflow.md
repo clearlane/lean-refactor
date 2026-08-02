@@ -12,7 +12,7 @@ Iterative Git mode is strictly clean-only. The coordinator's initialization adap
 scripts/workflow.sh init <SCOPE_PATH> [--max-iterations N] [--tier-floor 1|2|3|4] [--code-only]
 ```
 
-Setup calls `write_state` from `state.sh`. `LEAN_STATE_FIELDS` is canonical ordered schema. State path is `<root_path>/.claude/lean-refactor.<session_id>.local.md`; format is flat frontmatter, one colon/newline-free scalar per field. `schema_version` rejects stale layouts.
+Setup calls `write_state` from `state.sh`. `LEAN_STATE_FIELDS` is canonical ordered schema. State path is `<root_path>/<state-dir>/lean-refactor.<session_id>.local.md`, where `<state-dir>` defaults to `.claude` and hosts override it with `LEAN_REFACTOR_STATE_DIR` (one safe path segment). The same value is excluded from every repository fingerprint, so changing it mid-run orphans existing state. Format is flat frontmatter, one colon/newline-free scalar per field. `schema_version` rejects stale layouts.
 
 Schema covers identity/counters/mode/paths/baseline; the coordinator `phase`; audit path and content hash; approval status/digest/time/approver/conditions/findings/tier/exclusions; live repository fingerprint; artifact path/hash pairs for baseline result, reference inventory, evidence, classification, boundary diff, state impact, and external impact; discovery-checkpoint and boundary-ledger path/hash pairs; current/previous finding signatures; expected-wave manifest path/hash/status; hook failure count/limit/evidence. Approved state requires every approval-bound value except exclusions and conditions. Validation recomputes repository fingerprint and every source artifact hash; copied state hashes cannot establish freshness.
 
