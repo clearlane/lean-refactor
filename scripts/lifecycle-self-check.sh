@@ -177,4 +177,15 @@ printf '<lean-refactor-complete>\n' >"$tmp/last-output"
 advance_result=$("$SCRIPT_DIR/workflow.sh" advance "$complete_state" --last-output "$tmp/last-output")
 [[ "$advance_result" == *'terminal=complete'* ]]
 [[ ! -e "$complete_state" ]]
+
+cancel_root="$tmp/cancel-repo"
+mkdir -p "$cancel_root"
+"$SCRIPT_DIR/workflow.sh" init "$cancel_root" --code-only >"$tmp/cancel-setup.out"
+cancel_state=$(sed -n 's/^State: //p' "$tmp/cancel-setup.out")
+mkdir "${cancel_state}.lock"
+if "$SCRIPT_DIR/workflow.sh" cancel --root "$cancel_root" >/dev/null 2>&1; then exit 1; fi
+[[ -e "$cancel_state" ]]
+rmdir "${cancel_state}.lock"
+"$SCRIPT_DIR/workflow.sh" cancel --root "$cancel_root" >/dev/null
+[[ ! -e "$cancel_state" ]]
 printf 'Lifecycle self-check: PASS\n'

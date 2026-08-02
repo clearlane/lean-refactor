@@ -72,4 +72,4 @@ Corrupt state fails closed. Hook leaves original untouched, atomically increment
 scripts/workflow.sh cancel [--root <scope-or-root>] [SESSION_ID]
 ```
 
-Root uses same Git-first, code-only fallback resolution. Only valid matching state below exact resolved root is removed. Corrupt state and `.failure` evidence remain; source changes remain untouched.
+Root uses same Git-first, code-only fallback resolution. Cancellation joins the per-session mutation lock, revalidates after acquisition, and preserves busy or changed sessions for retry. Only valid matching state below exact resolved root is removed. Corrupt state and `.failure` evidence remain; source changes remain untouched.

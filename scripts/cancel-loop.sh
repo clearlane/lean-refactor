@@ -49,9 +49,21 @@ while IFS= read -r file; do
     invalid=1
     continue
   fi
+  if ! acquire_state_lock "$file"; then
+    echo "Preserved busy session; retry cancellation: $file" >&2
+    invalid=1
+    continue
+  fi
+  if ! validate_state "$file"; then
+    echo "Preserved session changed during cancellation: $file" >&2
+    release_state_lock
+    invalid=1
+    continue
+  fi
   ledger=$(parse_field "$file" boundary_ledger)
   discovery=$(parse_field "$file" discovery_ledger)
   rm -f "$file" "$ledger" "$discovery"
+  release_state_lock
   echo "Cancelled session: $sid"
 done < <(list_state_files "$root")
 
