@@ -165,7 +165,7 @@ validate_boundary_ledger() {
   ledger=$(parse_field "$state" boundary_ledger)
   jq -e --arg sid "$(parse_field "$state" session_id)" '
     .schema_version == 2 and .session_id == $sid and (.boundaries | type == "object") and
-    ([.boundaries[] |
+    ([.boundaries[] | . as $boundary |
       (.status | IN("pending", "completed", "blocked")) and
       (.repair_attempts | type == "number" and . >= 0) and
       (.verification_failures | type == "number" and . >= 0) and
@@ -185,7 +185,32 @@ validate_boundary_ledger() {
         (.manifest_hash | type == "string" and test("^[0-9a-f]{64}$")) and
         (.recorded_at | type == "string" and length > 0)
       ] | all) and
-      ([.history[].manifest] | length == (unique | length))
+      ([.history[].manifest] | length == (unique | length)) and
+      ([.history[] | select(.kind == "repair") | .attempt] == [range(1; $boundary.repair_attempts + 1)]) and
+      ([.history[] | select(.kind == "verification") | .attempt] ==
+        [range(1; ([.history[] | select(.kind == "verification")] | length) + 1)]) and
+      ($boundary.verification_failures ==
+        ([.history[] | select(.kind == "verification" and (.result == "retryable" or .result == "failed"))] | length)) and
+      (if (.history | length) == 0 then
+        .last_result == "" and .last_manifest == "" and .last_manifest_hash == "" and .recorded_at == ""
+       else
+        .history[-1] as $last |
+        .last_result == ($last.kind + ":" + $last.result) and
+        .last_manifest == $last.manifest and .last_manifest_hash == $last.manifest_hash and
+        .recorded_at == $last.recorded_at
+       end) and
+      (.repair_status ==
+        (if any(.history[]; .kind == "repair" and .result == "completed") then "completed"
+         elif any(.history[]; .kind == "repair" and .result == "blocked") or .repair_attempts >= .repair_limit then "blocked"
+         else "pending" end)) and
+      (.verification_status ==
+        (if any(.history[]; .kind == "verification" and .result == "completed") then "completed"
+         elif any(.history[]; .kind == "verification" and .result == "blocked") or .verification_failures >= .verification_limit then "blocked"
+         else "pending" end)) and
+      (.status ==
+        (if .repair_status == "blocked" or .verification_status == "blocked" then "blocked"
+         elif .repair_status == "completed" and .verification_status == "completed" then "completed"
+         else "pending" end))
     ] | all)
   ' "$ledger" >/dev/null || return 1
   while IFS=$'\t' read -r manifest expected_hash; do

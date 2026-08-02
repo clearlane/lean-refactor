@@ -67,6 +67,15 @@ if "$SCRIPT_DIR/record-boundary-result.sh" "$state" --boundary F2 --kind repair 
 if "$SCRIPT_DIR/record-boundary-result.sh" "$state" --boundary F1 --kind verification --result completed --manifest "$boundary_manifest" >/dev/null 2>&1; then exit 1; fi
 "$SCRIPT_DIR/workflow.sh" boundary "$state" --boundary F1 --kind repair --result retryable --manifest "$boundary_manifest" >/dev/null
 if boundary_ledger_ready "$state"; then exit 1; fi
+ledger=$(parse_field "$state" boundary_ledger)
+cp "$ledger" "$tmp/valid-ledger.json"
+jq '.boundaries.F1.repair_attempts = 0' "$ledger" >"$tmp/impossible-ledger.json"
+mv "$tmp/impossible-ledger.json" "$ledger"
+update_field "$state" boundary_ledger_hash "$(sha256_file "$ledger")"
+if validate_boundary_ledger "$state"; then exit 1; fi
+mv "$tmp/valid-ledger.json" "$ledger"
+update_field "$state" boundary_ledger_hash "$(sha256_file "$ledger")"
+validate_boundary_ledger "$state"
 boundary_manifest="$tmp/boundary-repair-2.json"
 write_boundary_manifest "$boundary_manifest" F1 2 completed
 "$SCRIPT_DIR/workflow.sh" boundary "$state" --boundary F1 --kind repair --result completed --manifest "$boundary_manifest" >/dev/null
