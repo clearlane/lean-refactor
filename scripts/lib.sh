@@ -225,16 +225,50 @@ boundary_ledger_ready() {
   jq -e '[.boundaries[] | select(.status != "completed")] | length == 0' "$ledger" >/dev/null
 }
 
-update_field() {
-  local file="$1" key="$2" value="$3" tmp
-  [[ " $COMPOUND_STATE_FIELDS " == *" $key "* && "$value" != *$'\n'* && "$value" != *:* ]] || return 1
+update_fields() {
+  local file="$1" tmp key value assignments="" separator=""
+  shift
+  (($# >= 2 && $# % 2 == 0)) || return 1
+  while (($# > 0)); do
+    key="$1"
+    value="$2"
+    shift 2
+    [[ " $COMPOUND_STATE_FIELDS " == *" $key "* && "$value" != *$'\n'* && "$value" != *:* ]] || return 1
+    assignments+="${separator}${key}=${value}"
+    separator=$'\034'
+  done
   tmp="${file}.tmp.$$"
-  awk -v key="$key" -v value="$value" '$0 ~ "^" key ":" { print key ": \"" value "\""; found=1; next } { print } END { if (!found) exit 2 }' "$file" >"$tmp" || {
+  awk -v assignments="$assignments" '
+    BEGIN {
+      count = split(assignments, pairs, "\034")
+      for (i = 1; i <= count; i++) {
+        split_at = index(pairs[i], "=")
+        key = substr(pairs[i], 1, split_at - 1)
+        values[key] = substr(pairs[i], split_at + 1)
+        required[key] = 1
+      }
+    }
+    {
+      split_at = index($0, ":")
+      key = substr($0, 1, split_at - 1)
+      if (key in required) {
+        print key ": \"" values[key] "\""
+        found[key] = 1
+        next
+      }
+      print
+    }
+    END {
+      for (key in required) if (!(key in found)) exit 2
+    }
+  ' "$file" >"$tmp" || {
     rm -f "$tmp"
     return 1
   }
   mv "$tmp" "$file"
 }
+
+update_field() { update_fields "$@"; }
 
 repository_fingerprint() {
   local root="$1" mode="$2" excluded="${3:-}" excluded_rel="" excluded_dir head tree tracked untracked
@@ -308,14 +342,14 @@ validate_approval() {
 
 revoke_approval() {
   local file="$1"
-  update_field "$file" approval_status revoked && update_field "$file" approval_digest ""
+  update_fields "$file" approval_status revoked approval_digest ""
 }
 
 increment_failure() {
   local file="$1" message="$2" count
   validate_state "$file" || return 1
   count=$(parse_field "$file" failure_count)
-  update_field "$file" failure_count "$((count + 1))" && update_field "$file" last_failure "$message"
+  update_fields "$file" failure_count "$((count + 1))" last_failure "$message"
 }
 
 record_corrupt_failure() {

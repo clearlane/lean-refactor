@@ -55,10 +55,7 @@ if ! validate_wave "$state"; then
 fi
 
 next=$((iteration + 1))
-update_field "$state" iteration "$next"
-update_field "$state" failure_count 0
-update_field "$state" last_failure ""
-update_field "$state" phase discovery
+update_fields "$state" iteration "$next" failure_count 0 last_failure "" phase discovery
 printf 'outcome=deny\nreason=Resume canonical lean-refactor workflow from SKILL.md. State: %s; root: %s; scope: %s; audit: %s; iteration: %s/%s; tier floor: %s; approval: %s. Validate persisted checkpoints and begin discovery.\n' \
   "$state" "$(parse_field "$state" root_path)" "$(parse_field "$state" scope_path)" \
   "$(parse_field "$state" audit_file)" "$next" "$max_iterations" \
