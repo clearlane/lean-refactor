@@ -18,6 +18,16 @@ for stage in prior-art layers synthesis audit; do
   printf '%s\n' "$stage" >"$tmp/$stage"
   "$SCRIPT_DIR/workflow.sh" discovery "$state" --stage "$stage" --artifact "$tmp/$stage" >/dev/null
 done
+if "$SCRIPT_DIR/workflow.sh" approve "$state" "$audit" --approver tester --findings F1,F1 --tier 1 \
+  --baseline-result "$tmp/baseline" --reference-inventory "$tmp/refs" \
+  --evidence "$tmp/evidence" --classification "$tmp/classification" \
+  --boundary-diff "$tmp/boundary" --state-impact "$tmp/state-impact" \
+  --external-impact "$tmp/external-impact" --wave-manifest "$tmp/wave" >/dev/null 2>&1; then exit 1; fi
+if "$SCRIPT_DIR/workflow.sh" approve "$state" "$audit" --approver tester --findings F1 --exclude F1 --tier 1 \
+  --baseline-result "$tmp/baseline" --reference-inventory "$tmp/refs" \
+  --evidence "$tmp/evidence" --classification "$tmp/classification" \
+  --boundary-diff "$tmp/boundary" --state-impact "$tmp/state-impact" \
+  --external-impact "$tmp/external-impact" --wave-manifest "$tmp/wave" >/dev/null 2>&1; then exit 1; fi
 "$SCRIPT_DIR/workflow.sh" approve "$state" "$audit" --approver tester --conditions none --findings F1 --tier 1 \
   --baseline-result "$tmp/baseline" --reference-inventory "$tmp/refs" \
   --evidence "$tmp/evidence" --classification "$tmp/classification" \

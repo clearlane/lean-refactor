@@ -43,6 +43,20 @@ validate_discovery_ledger "$state" || {
   usage
   exit 64
 }
+[[ -z "$exclusions" || "$exclusions" =~ ^[A-Za-z0-9._-]+(,[A-Za-z0-9._-]+)*$ ]] || {
+  echo "Error: exclusions must be comma-separated stable finding IDs" >&2
+  exit 64
+}
+if ! jq -en --arg findings "$findings" --arg exclusions "$exclusions" '
+  ($findings | split(",")) as $approved |
+  (if $exclusions == "" then [] else ($exclusions | split(",")) end) as $excluded |
+  ($approved | length) == ($approved | unique | length) and
+  ($excluded | length) == ($excluded | unique | length) and
+  (($approved - $excluded) | length) == ($approved | length)
+' >/dev/null; then
+  echo "Error: approved and excluded finding IDs must each be unique and disjoint" >&2
+  exit 64
+fi
 for artifact in "$baseline" "$refs" "$evidence" "$classification" "$boundary" "$state_impact" "$external_impact" "$wave"; do
   [[ "$artifact" == /* && -f "$artifact" ]] || {
     echo "Error: artifact must be absolute existing file: $artifact" >&2
