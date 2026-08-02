@@ -7,14 +7,14 @@ trap 'rm -rf "$tmp"' EXIT
 root="$tmp/repo"
 mkdir -p "$root"
 printf 'source\n' >"$root/source.txt"
-"$SCRIPT_DIR/setup-loop.sh" "$root" --code-only >"$tmp/setup.out"
+"$SCRIPT_DIR/workflow.sh" init "$root" --code-only >"$tmp/setup.out"
 state=$(sed -n 's/^State: //p' "$tmp/setup.out")
 audit="$root/audit.md"
 printf '# Audit\n' >"$audit"
 for artifact in baseline refs evidence classification boundary state-impact external-impact wave; do
   printf '%s\n' "$artifact" >"$tmp/$artifact"
 done
-"$SCRIPT_DIR/record-approval.sh" "$state" "$audit" --approver tester --conditions none --findings F1 --tier 1 \
+"$SCRIPT_DIR/workflow.sh" approve "$state" "$audit" --approver tester --conditions none --findings F1 --tier 1 \
   --baseline-result "$tmp/baseline" --reference-inventory "$tmp/refs" \
   --evidence "$tmp/evidence" --classification "$tmp/classification" \
   --boundary-diff "$tmp/boundary" --state-impact "$tmp/state-impact" \
@@ -28,14 +28,14 @@ boundary_manifest="$tmp/boundary-result"
 printf 'boundary attempt\n' >"$boundary_manifest"
 if "$SCRIPT_DIR/record-boundary-result.sh" "$state" --boundary F2 --kind repair --result completed --manifest "$boundary_manifest" >/dev/null 2>&1; then exit 1; fi
 if "$SCRIPT_DIR/record-boundary-result.sh" "$state" --boundary F1 --kind verification --result completed --manifest "$boundary_manifest" >/dev/null 2>&1; then exit 1; fi
-"$SCRIPT_DIR/record-boundary-result.sh" "$state" --boundary F1 --kind repair --result retryable --manifest "$boundary_manifest" >/dev/null
+"$SCRIPT_DIR/workflow.sh" boundary "$state" --boundary F1 --kind repair --result retryable --manifest "$boundary_manifest" >/dev/null
 if boundary_ledger_ready "$state"; then exit 1; fi
-"$SCRIPT_DIR/record-boundary-result.sh" "$state" --boundary F1 --kind repair --result completed --manifest "$boundary_manifest" >/dev/null
+"$SCRIPT_DIR/workflow.sh" boundary "$state" --boundary F1 --kind repair --result completed --manifest "$boundary_manifest" >/dev/null
 if boundary_ledger_ready "$state"; then exit 1; fi
-"$SCRIPT_DIR/record-boundary-result.sh" "$state" --boundary F1 --kind verification --result completed --manifest "$boundary_manifest" >/dev/null
+"$SCRIPT_DIR/workflow.sh" boundary "$state" --boundary F1 --kind verification --result completed --manifest "$boundary_manifest" >/dev/null
 boundary_ledger_ready "$state"
 signature=$(printf 'F1' | sha256_stream)
-"$SCRIPT_DIR/record-wave.sh" "$state" "$audit" --manifest "$tmp/wave" \
+"$SCRIPT_DIR/workflow.sh" finalize "$state" "$audit" --manifest "$tmp/wave" \
   --current-signature "$signature" --repair-ready-count 0 --approval-required no >/dev/null
 [[ "$(parse_field "$state" expected_wave_status)" == complete ]]
 validate_wave "$state"

@@ -34,7 +34,7 @@ Example:
 | Replace duplicated state schema | 5 | 2 | 3 | 3.33 | long tail |
 | Redesign migration family | 8 | 3 | 4 | 6 | 4 |
 
-Record approval selection, exclusions, timestamp, and digest in loop state/audit before repair. Digest covers approved finding IDs, tier/scope, exclusions, audit path, and timestamp.
+Record approval through `scripts/workflow.sh approve` before repair. Persist approver identity, conditions, selection, exclusions, timestamp, evidence artifacts, repository fingerprint, and digest in state/audit. The coordinator owns digest construction and initializes one ledger entry per approved finding ID.
 
 ## 4. Repair isolated boundaries
 
@@ -42,6 +42,7 @@ Group non-conflicting findings by atomic boundary. In Git mode, create named bra
 
 Each repair receives `repair-agent-prompt.md` with:
 
+- coordinator state path and immutable approval digest
 - confirmed finding IDs and fresh approval digest
 - baseline commit or `code-only`
 - dedicated worktree path where applicable
@@ -52,7 +53,7 @@ Focused tests require mutation/simulation failure then restored pass before edit
 
 ## 5. Verify and close
 
-Compare baseline/post commands and results. Require protected tests, project checks, and canonical zero-reference evidence. Update audit status, measured delta, failures, deferred items, and commit IDs where Git mode applies. Re-discovery provides convergence evidence; memory does not.
+Compare baseline/post commands and results. Require protected tests, project checks, and canonical zero-reference evidence. Record repair and verification outcomes through `scripts/workflow.sh boundary`; finalize only when every approved boundary has completed both stages. Update audit status, measured delta, failures, deferred items, and commit IDs where Git mode applies. Re-discovery provides convergence evidence; memory does not.
 
 ## Example final summary
 
