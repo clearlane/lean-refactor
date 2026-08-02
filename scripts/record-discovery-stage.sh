@@ -30,6 +30,15 @@ validate_state "$state" || {
   echo "Error: invalid state: $state" >&2
   exit 1
 }
+acquire_state_lock "$state" || {
+  echo "Error: workflow state is busy; retry this transition: $state" >&2
+  exit 75
+}
+trap 'release_state_lock' EXIT
+validate_state "$state" || {
+  echo "Error: state changed before discovery lock was acquired" >&2
+  exit 1
+}
 [[ "$stage" =~ ^(prior-art|layers|synthesis|audit)$ && "$artifact" == /* && -f "$artifact" ]] || {
   usage
   exit 64
@@ -67,7 +76,7 @@ iteration=$(parse_field "$state" iteration)
 next_ledger="${ledger}.tmp.$$"
 next_state="${state}.tmp.$$"
 backup_ledger="${ledger}.bak.$$"
-trap 'rm -f "$next_ledger" "$next_state" "$backup_ledger"' EXIT
+trap 'rm -f "$next_ledger" "$next_state" "$backup_ledger"; release_state_lock' EXIT
 jq --arg iteration "$iteration" --arg key "$key" --arg artifact "$artifact" \
   --arg artifact_hash "$(sha256_file "$artifact")" --arg recorded_at "$(date -u +%Y-%m-%dT%H%M%SZ)" '
   .iterations[$iteration] = (.iterations[$iteration] // {
@@ -94,5 +103,6 @@ if ! mv "$next_state" "$state"; then
   exit 1
 fi
 rm -f "$backup_ledger"
+release_state_lock
 trap - EXIT
 printf 'Discovery stage recorded: %s\n' "$stage"

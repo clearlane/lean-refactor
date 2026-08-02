@@ -29,6 +29,15 @@ validate_state "$state" || {
   echo "Error: invalid state: $state" >&2
   exit 1
 }
+acquire_state_lock "$state" || {
+  echo "Error: workflow state is busy; retry this transition: $state" >&2
+  exit 75
+}
+trap 'release_state_lock' EXIT
+validate_state "$state" || {
+  echo "Error: state changed before finalization lock was acquired" >&2
+  exit 1
+}
 [[ "$audit" == "$(parse_field "$state" audit_file)" && -f "$audit" ]] || {
   echo "Error: audit does not match state" >&2
   exit 1
@@ -66,7 +75,7 @@ boundary_ledger_ready "$state" || {
 next_state="${state}.tmp.$$"
 next_audit="${audit}.tmp.$$"
 backup_audit="${audit}.bak.$$"
-trap 'rm -f "$next_state" "$next_audit" "$backup_audit"' EXIT
+trap 'rm -f "$next_state" "$next_audit" "$backup_audit"; release_state_lock' EXIT
 cp "$state" "$next_state"
 cp "$audit" "$next_audit"
 {
@@ -96,5 +105,6 @@ if ! mv "$next_state" "$state"; then
   exit 1
 fi
 rm -f "$backup_audit"
+release_state_lock
 trap - EXIT
 printf 'Wave finalized: %s\n' "$state"

@@ -18,6 +18,15 @@ validate_state "$state" || {
   echo "Error: invalid state: $state" >&2
   exit 1
 }
+acquire_state_lock "$state" || {
+  echo "Error: workflow state is busy; retry advance: $state" >&2
+  exit 75
+}
+trap 'release_state_lock' EXIT
+validate_state "$state" || {
+  echo "Error: state changed before advance lock was acquired" >&2
+  exit 1
+}
 
 iteration=$(parse_field "$state" iteration)
 max_iterations=$(parse_field "$state" max_iterations)
@@ -32,6 +41,8 @@ if [[ -n "$marker" ]]; then
     ledger=$(parse_field "$state" boundary_ledger)
     discovery=$(parse_field "$state" discovery_ledger)
     rm -f "$state" "$ledger" "$discovery"
+    release_state_lock
+    trap - EXIT
     printf 'outcome=continue\nterminal=%s\n' "$marker"
     exit 0
   fi
@@ -56,6 +67,8 @@ fi
 
 next=$((iteration + 1))
 update_fields "$state" iteration "$next" failure_count 0 last_failure "" phase discovery
+release_state_lock
+trap - EXIT
 printf 'outcome=deny\nreason=Resume canonical lean-refactor workflow from SKILL.md. State: %s; root: %s; scope: %s; audit: %s; iteration: %s/%s; tier floor: %s; approval: %s. Validate persisted checkpoints and begin discovery.\n' \
   "$state" "$(parse_field "$state" root_path)" "$(parse_field "$state" scope_path)" \
   "$(parse_field "$state" audit_file)" "$next" "$max_iterations" \

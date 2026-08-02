@@ -36,6 +36,15 @@ validate_state "$state" || {
   echo "Error: invalid state: $state" >&2
   exit 1
 }
+acquire_state_lock "$state" || {
+  echo "Error: workflow state is busy; retry this transition: $state" >&2
+  exit 75
+}
+trap 'release_state_lock' EXIT
+validate_state "$state" || {
+  echo "Error: state changed before boundary lock was acquired" >&2
+  exit 1
+}
 [[ "$(parse_field "$state" phase)" =~ ^(approved|repair|verification)$ ]] || {
   echo "Error: boundary results require approved workflow state" >&2
   exit 1
@@ -129,7 +138,7 @@ fi
 next_ledger="${ledger}.tmp.$$"
 next_state="${state}.tmp.$$"
 backup_ledger="${ledger}.bak.$$"
-trap 'rm -f "$next_ledger" "$next_state" "$backup_ledger"' EXIT
+trap 'rm -f "$next_ledger" "$next_state" "$backup_ledger"; release_state_lock' EXIT
 
 repair_increment=0
 verification_increment=0
@@ -185,5 +194,6 @@ if ! mv "$next_state" "$state"; then
   exit 1
 fi
 rm -f "$backup_ledger"
+release_state_lock
 trap - EXIT
 jq -c --arg id "$boundary" '.boundaries[$id]' "$ledger"

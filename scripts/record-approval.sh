@@ -31,6 +31,15 @@ validate_state "$state" || {
   echo "Error: invalid state: $state" >&2
   exit 1
 }
+acquire_state_lock "$state" || {
+  echo "Error: workflow state is busy; retry this transition: $state" >&2
+  exit 75
+}
+trap 'release_state_lock' EXIT
+validate_state "$state" || {
+  echo "Error: state changed before approval lock was acquired" >&2
+  exit 1
+}
 [[ "$(parse_field "$state" phase)" == audit_ready ]] || {
   echo "Error: approval requires completed prior-art, layer-scan, synthesis, and audit checkpoints" >&2
   exit 1
@@ -67,7 +76,7 @@ next="${state}.tmp.$$"
 ledger=$(parse_field "$state" boundary_ledger)
 next_ledger="${ledger}.tmp.$$"
 backup_ledger="${ledger}.bak.$$"
-trap 'rm -f "$next" "$next_ledger" "$backup_ledger"' EXIT
+trap 'rm -f "$next" "$next_ledger" "$backup_ledger"; release_state_lock' EXIT
 cp "$state" "$next"
 jq --arg findings "$findings" '
   .boundaries = ($findings | split(",") | map({key: ., value: {
@@ -112,5 +121,6 @@ if ! mv "$next" "$state"; then
   exit 1
 fi
 rm -f "$backup_ledger"
+release_state_lock
 trap - EXIT
 printf '%s\n' "$(parse_field "$state" approval_digest)"

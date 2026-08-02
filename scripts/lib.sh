@@ -5,6 +5,22 @@ readonly COMPOUND_STATE_PREFIX="lean-refactor."
 readonly COMPOUND_STATE_SUFFIX=".local.md"
 readonly COMPOUND_STATE_FIELDS="schema_version session_id phase iteration max_iterations tier_floor mode root_path scope_path baseline_commit audit_file audit_hash approval_status approval_digest approval_recorded_at approver approval_conditions approved_findings approved_tier approval_exclusions repository_fingerprint baseline_result_artifact baseline_result_hash reference_inventory_artifact reference_inventory_hash evidence_artifact evidence_hash classification_artifact classification_hash boundary_diff_artifact boundary_diff_hash state_impact_artifact state_impact_hash external_impact_artifact external_impact_hash discovery_ledger discovery_ledger_hash boundary_ledger boundary_ledger_hash current_signature previous_signature expected_wave_manifest expected_wave_manifest_hash expected_wave_status failure_count failure_limit last_failure"
 readonly COMPOUND_OPTIONAL_FIELDS="audit_file audit_hash approval_digest approval_recorded_at approver approval_conditions approved_findings approved_tier approval_exclusions repository_fingerprint baseline_result_artifact baseline_result_hash reference_inventory_artifact reference_inventory_hash evidence_artifact evidence_hash classification_artifact classification_hash boundary_diff_artifact boundary_diff_hash state_impact_artifact state_impact_hash external_impact_artifact external_impact_hash current_signature previous_signature expected_wave_manifest expected_wave_manifest_hash expected_wave_status last_failure"
+COMPOUND_STATE_LOCK=""
+
+acquire_state_lock() {
+  local file="$1" lock
+  [[ "$file" == /* && -d "$(dirname "$file")" ]] || return 1
+  lock="${file}.lock"
+  mkdir "$lock" 2>/dev/null || return 1
+  COMPOUND_STATE_LOCK="$lock"
+  printf '%s\n' "$$" >"$lock/pid"
+}
+
+release_state_lock() {
+  [[ -n "$COMPOUND_STATE_LOCK" ]] || return 0
+  rm -rf "$COMPOUND_STATE_LOCK"
+  COMPOUND_STATE_LOCK=""
+}
 
 parse_field() {
   local file="$1" key="$2"
@@ -354,6 +370,7 @@ increment_failure() {
 
 record_corrupt_failure() {
   local file="$1" message="$2" evidence count=0 tmp
+  acquire_state_lock "$file" || return 1
   evidence="${file}.failure"
   [[ -f "$evidence" ]] && count=$(parse_field "$evidence" failure_count)
   [[ "$count" =~ ^[0-9]+$ ]] || count=0
@@ -367,6 +384,7 @@ recorded_at: "$(date -u +%Y-%m-%dT%H%M%SZ)"
 ---
 EOF
   mv "$tmp" "$evidence"
+  release_state_lock
 }
 
 audit_field() { sed -n 's/^compound_'"$2"':[[:space:]]*//p' "$1" | tail -n 1; }

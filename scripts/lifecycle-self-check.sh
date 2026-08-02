@@ -63,6 +63,9 @@ jq '.blocker = ""' "$boundary_manifest" >"$tmp/unexplained-failure.json"
 if "$SCRIPT_DIR/workflow.sh" boundary "$state" --boundary F1 --kind repair --result retryable --manifest "$tmp/unexplained-failure.json" >/dev/null 2>&1; then exit 1; fi
 jq '.blocker = "retry after repair evidence review"' "$boundary_manifest" >"$tmp/retryable.json"
 boundary_manifest="$tmp/retryable.json"
+mkdir "${state}.lock"
+if "$SCRIPT_DIR/workflow.sh" boundary "$state" --boundary F1 --kind repair --result retryable --manifest "$boundary_manifest" >/dev/null 2>&1; then exit 1; fi
+rmdir "${state}.lock"
 if "$SCRIPT_DIR/record-boundary-result.sh" "$state" --boundary F2 --kind repair --result completed --manifest "$boundary_manifest" >/dev/null 2>&1; then exit 1; fi
 if "$SCRIPT_DIR/record-boundary-result.sh" "$state" --boundary F1 --kind verification --result completed --manifest "$boundary_manifest" >/dev/null 2>&1; then exit 1; fi
 "$SCRIPT_DIR/workflow.sh" boundary "$state" --boundary F1 --kind repair --result retryable --manifest "$boundary_manifest" >/dev/null

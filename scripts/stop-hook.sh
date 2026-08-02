@@ -31,14 +31,17 @@ while IFS= read -r file; do
 done < <(list_state_files "$root")
 [[ -n "$matching" ]] || exit 0
 if ! validate_state "$matching"; then
-  record_corrupt_failure "$matching" "state validation failed"
+  record_corrupt_failure "$matching" "state validation failed" || true
   block "Corrupt lean-refactor state preserved. Repair state before continuation: $matching"
   exit 0
 fi
 
 session_id=$(parse_field "$matching" session_id)
 if ! last_output=$(jq -rs '[.[] | select(.role == "assistant" or (.message.role? == "assistant"))] | if length == 0 then "" else (last | if .message then .message else . end | .content | map(select(.type == "text") | .text) | join("\n")) end' "$transcript" 2>/dev/null); then
-  increment_failure "$matching" "transcript extraction failed" || true
+  if acquire_state_lock "$matching"; then
+    increment_failure "$matching" "transcript extraction failed" || true
+    release_state_lock
+  fi
   block "Transcript extraction failed. Evidence preserved: $matching"
   exit 0
 fi
