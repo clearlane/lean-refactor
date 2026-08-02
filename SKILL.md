@@ -88,6 +88,6 @@ Read [methodology.md](references/methodology.md) for the detailed execution proc
 
 Emit `<lean-refactor-complete>` only after `workflow.sh conclude-discovery` records zero repair-ready findings at or below the tier floor. Emit `<lean-refactor-stuck>` only when the current and previous normalized finding signatures are identical and audit-backed. The host event adapter delegates marker decisions to `workflow.sh advance`; marker text alone has no authority.
 
-Before handoff, run repository-native checks, including this skill's `bash -n`, ShellCheck, shfmt, `scripts/names.sh` filename check, Bats lifecycle tests (or portable smoke fallback), JSON Schema checks, and repository-frame validation when these files changed.
+Before handoff, run the target repository's native checks. When this skill's own files changed, run `scripts/check.sh`; it owns the complete check list, so no caller restates the individual commands.
 
 Name every resource you add or rename with one lowercase word, or a family-first lowercase hyphenated stem when one word is ambiguous. Put the stable family first (`loop-setup.sh`, not `setup-loop.sh`) so siblings sort together, and avoid generic segments such as `helper`, `utils`, or `new`. `scripts/names.sh` enforces this and preserves names fixed by an external contract.
