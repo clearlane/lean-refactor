@@ -15,9 +15,17 @@ for artifact in baseline refs evidence classification boundary state-impact exte
   printf '%s\n' "$artifact" >"$tmp/$artifact"
 done
 for stage in prior-art layers synthesis audit; do
-  printf '%s\n' "$stage" >"$tmp/$stage"
-  "$SCRIPT_DIR/workflow.sh" discovery "$state" --stage "$stage" --artifact "$tmp/$stage" >/dev/null
+  artifact="$tmp/$stage"
+  [[ "$stage" != audit ]] || artifact="$audit"
+  printf '%s\n' "$stage" >"$artifact"
+  "$SCRIPT_DIR/workflow.sh" discovery "$state" --stage "$stage" --artifact "$artifact" >/dev/null
 done
+printf '# Different audit\n' >"$tmp/different-audit.md"
+if "$SCRIPT_DIR/workflow.sh" approve "$state" "$tmp/different-audit.md" --approver tester --findings F1 --tier 1 \
+  --baseline-result "$tmp/baseline" --reference-inventory "$tmp/refs" \
+  --evidence "$tmp/evidence" --classification "$tmp/classification" \
+  --boundary-diff "$tmp/boundary" --state-impact "$tmp/state-impact" \
+  --external-impact "$tmp/external-impact" --wave-manifest "$tmp/wave" >/dev/null 2>&1; then exit 1; fi
 if "$SCRIPT_DIR/workflow.sh" approve "$state" "$audit" --approver tester --findings F1,F1 --tier 1 \
   --baseline-result "$tmp/baseline" --reference-inventory "$tmp/refs" \
   --evidence "$tmp/evidence" --classification "$tmp/classification" \
@@ -123,7 +131,9 @@ blocked_state=$(sed -n 's/^State: //p' "$tmp/blocked-setup.out")
 blocked_audit="$blocked_root/audit.md"
 printf '# Audit\n' >"$blocked_audit"
 for stage in prior-art layers synthesis audit; do
-  "$SCRIPT_DIR/workflow.sh" discovery "$blocked_state" --stage "$stage" --artifact "$tmp/$stage" >/dev/null
+  artifact="$tmp/$stage"
+  [[ "$stage" != audit ]] || artifact="$blocked_audit"
+  "$SCRIPT_DIR/workflow.sh" discovery "$blocked_state" --stage "$stage" --artifact "$artifact" >/dev/null
 done
 "$SCRIPT_DIR/workflow.sh" approve "$blocked_state" "$blocked_audit" --approver tester --findings B1 --tier 1 \
   --baseline-result "$tmp/baseline" --reference-inventory "$tmp/refs" \
@@ -153,8 +163,12 @@ complete_state=$(sed -n 's/^State: //p' "$tmp/complete-setup.out")
 complete_audit="$complete_root/audit.md"
 printf '# Audit\n' >"$complete_audit"
 for stage in prior-art layers synthesis audit; do
-  "$SCRIPT_DIR/workflow.sh" discovery "$complete_state" --stage "$stage" --artifact "$tmp/$stage" >/dev/null
+  artifact="$tmp/$stage"
+  [[ "$stage" != audit ]] || artifact="$complete_audit"
+  "$SCRIPT_DIR/workflow.sh" discovery "$complete_state" --stage "$stage" --artifact "$artifact" >/dev/null
 done
+if "$SCRIPT_DIR/workflow.sh" conclude-discovery "$complete_state" "$tmp/different-audit.md" \
+  --manifest "$tmp/wave" --current-signature "$(printf '' | sha256_stream)" --repair-ready-count 0 >/dev/null 2>&1; then exit 1; fi
 empty_signature=$(printf '' | sha256_stream)
 "$SCRIPT_DIR/workflow.sh" conclude-discovery "$complete_state" "$complete_audit" \
   --manifest "$tmp/wave" --current-signature "$empty_signature" --repair-ready-count 0 >/dev/null

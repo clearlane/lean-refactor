@@ -48,6 +48,10 @@ validate_discovery_ledger "$state" || {
   echo "Error: discovery ledger is invalid" >&2
   exit 1
 }
+validate_discovery_audit "$state" "$audit" || {
+  echo "Error: approval audit must match the current discovery audit checkpoint" >&2
+  exit 1
+}
 [[ "$audit" == /* && -f "$audit" && -n "$approver" && "$findings" =~ ^[A-Za-z0-9._-]+(,[A-Za-z0-9._-]+)*$ && "$tier" =~ ^[1-4]$ ]] || {
   usage
   exit 64

@@ -54,6 +54,10 @@ validate_discovery_ledger "$state" || {
   echo "Error: discovery ledger is invalid" >&2
   exit 1
 }
+validate_discovery_audit "$state" "$audit" || {
+  echo "Error: conclusion audit must match the current discovery audit checkpoint" >&2
+  exit 1
+}
 [[ "$audit" == /* && -f "$audit" && "$manifest" == /* && -f "$manifest" ]] || {
   echo "Error: audit and manifest must be absolute existing files" >&2
   exit 64

@@ -186,6 +186,19 @@ validate_discovery_ledger() {
   done < <(jq -r '.iterations[] | [.prior_art, .layers, .synthesis, .audit][] | select(.status == "completed") | [.artifact, .artifact_hash] | @tsv' "$ledger")
 }
 
+validate_discovery_audit() {
+  local state="$1" audit="$2" ledger iteration
+  validate_discovery_ledger "$state" || return 1
+  ledger=$(parse_field "$state" discovery_ledger)
+  iteration=$(parse_field "$state" iteration)
+  [[ "$audit" == /* && -f "$audit" ]] || return 1
+  jq -e --arg iteration "$iteration" --arg audit "$audit" --arg hash "$(sha256_file "$audit")" '
+    .iterations[$iteration].audit.status == "completed" and
+    .iterations[$iteration].audit.artifact == $audit and
+    .iterations[$iteration].audit.artifact_hash == $hash
+  ' "$ledger" >/dev/null
+}
+
 validate_boundary_ledger() {
   local state="$1" ledger manifest expected_hash
   validate_state "$state" || return 1
