@@ -28,11 +28,11 @@ Before editing:
 5. Prove targeted test sensitivity by introducing/simulating assigned defect, capturing expected failure, restoring baseline, and capturing pass before repair. Never delete, weaken, skip, or rewrite tests merely to make repair pass.
 
 Repair:
-- Follow canonical Hard-Cut Policy, approval gate, sizing, and git ownership in SKILL.md.
+- Follow the canonical Safety and Evidence Invariants, approval gate, sizing, and git ownership in SKILL.md.
 - Edit only assigned boundary and ALLOWED_PATHS; never edit audit file. Read each affected file completely before edit.
 - For state-bound work, execute approved snapshot/export, transition, read-back/count, and restoration-verification contract before hard cut.
 - Use TDD for behavior changes: sensitive failing test, minimum repair, passing test.
-- Keep tests that protect old-state rejection when Hard-Cut Policy requires rejection.
+- Keep tests that protect old-state rejection when the Safety and Evidence Invariants require rejection.
 - Do not commit; orchestrator owns git operations.
 
 After editing:

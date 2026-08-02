@@ -4,7 +4,7 @@ Create an audit scaffold at `docs/audits/<YYYY-MM-DD>-lean-refactor-<scope>.md` 
 
 ## Template
 
-Fields below record evidence required by `SKILL.md` § Canonical Safety and Evidence Policy; that section governs conflicts and interpretation.
+Fields below record evidence required by `SKILL.md` § Safety and Evidence Invariants; that section governs conflicts and interpretation.
 
 ```markdown
 ---
@@ -195,9 +195,9 @@ earlier one — the previous section is the only surviving record of the prior
 iteration once context resets.
 
 ```
-includes/helpers.php:ef_vx_select_pair:unadopted-helper
-templates/card.html.twig:tag-list-fragment:missing-partial
-widgets/wrapper.php:tags:enum-drift
+lib/helpers.ext:select_pair:unadopted-helper
+templates/card.tmpl:tag-list-fragment:missing-partial
+components/wrapper.ext:tags:enum-drift
 ```
 
 Compare this section against `## Iteration N-1 — finding signature`. Identical
@@ -205,11 +205,11 @@ sorted sets mean no progress — emit `<lean-refactor-stuck>`.
 
 ## Execution log
 
-- YYYY-MM-DD HH:MM — Phase 0 mode/fingerprint/dirty-tree decision recorded
+- YYYY-MM-DD HH:MM — Mode, fingerprint, and dirty-tree decision recorded
 - YYYY-MM-DD HH:MM — Prior-art report completed
-- YYYY-MM-DD HH:MM — Phase 2 layer agents dispatched in parallel
+- YYYY-MM-DD HH:MM — Layer agents dispatched in parallel
 - YYYY-MM-DD HH:MM — Cross-cutting synthesis dispatched after reports
-- YYYY-MM-DD HH:MM — Phase 4 audit written
+- YYYY-MM-DD HH:MM — Exhaustive audit written and recorded
 - YYYY-MM-DD HH:MM — Approval persisted for `<IDs>` at `<fingerprint>`
 - YYYY-MM-DD HH:MM — Boundary worktrees created: `<paths>`
 - YYYY-MM-DD HH:MM — Commits landed: `<hashes>`
@@ -219,7 +219,7 @@ sorted sets mean no progress — emit `<lean-refactor-stuck>`.
 ## Tips
 
 - **Status field per finding** — keep the audit file in sync as repair agents land. Mark `resolved by <hash>` so the audit becomes a permanent index from "drift surface" to "commit that closed it".
-- **Legacy-path disposition per finding** — record complete removal by default. Include the temporary compatibility exception block only after explicit approval, with all four Hard-Cut Policy exception fields and its ADR/task added in the same diff.
+- **Legacy-path disposition per finding** — record complete removal by default. Include the temporary compatibility exception block only after explicit approval, with all four temporary-compatibility fields required by the Safety and Evidence Invariants and its ADR/task added in the same diff.
 - **Leverage column in tables** — surfaces the formula at a glance for the user during the approval gate.
 - **Worked excerpts under each finding** — the orchestrator's value is the synthesis; the agents supply raw observations. Don't lose them.
 - **Tier 4 separate section** — these escalate to dedicated planning; keep them visible but separate so a future planning workflow can read just that section.
