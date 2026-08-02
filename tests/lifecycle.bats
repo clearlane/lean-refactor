@@ -112,3 +112,47 @@ write_manifest() {
   [ "$status" -eq 0 ]
   [ ! -e "$STATE" ]
 }
+
+@test "an exhausted repair budget becomes terminal and blocks wave finalization" {
+  init_discovery
+  approve_f1
+
+  for attempt in 1 2; do
+    write_manifest "$TEST_TMP/fail-$attempt.json" failed "$attempt" "repair command failed"
+    run "$SCRIPT_DIR/workflow.sh" boundary "$STATE" --boundary F1 --kind repair \
+      --result failed --manifest "$TEST_TMP/fail-$attempt.json"
+    [ "$status" -eq 0 ]
+  done
+
+  # The budget is spent, so no further repair may be recorded for this boundary.
+  write_manifest "$TEST_TMP/late.json" completed 3
+  run "$SCRIPT_DIR/workflow.sh" boundary "$STATE" --boundary F1 --kind repair \
+    --result completed --manifest "$TEST_TMP/late.json"
+  [ "$status" -ne 0 ]
+
+  run bash -c "source '$SCRIPT_DIR/state.sh'; boundary_ledger_ready '$STATE'"
+  [ "$status" -ne 0 ]
+
+  signature=$(printf 'F1' | shasum -a 256 | awk '{print $1}')
+  run "$SCRIPT_DIR/workflow.sh" finalize "$STATE" "$AUDIT" --manifest "$TEST_TMP/wave" \
+    --current-signature "$signature" --repair-ready-count 0 --approval-required no
+  [ "$status" -ne 0 ]
+}
+
+@test "the stuck marker requires identical signatures in both audit and state" {
+  init_discovery
+  make_approval_artifacts
+  signature=$(printf 'F1' | shasum -a 256 | awk '{print $1}')
+
+  run "$SCRIPT_DIR/workflow.sh" conclude-discovery "$STATE" "$AUDIT" \
+    --manifest "$TEST_TMP/wave" --current-signature "$signature" \
+    --previous-signature "$signature" --repair-ready-count 0
+  [ "$status" -eq 0 ]
+
+  run bash -c "source '$SCRIPT_DIR/state.sh'; validate_terminal_audit '$STATE' stuck"
+  [ "$status" -eq 0 ]
+
+  # A signature that no longer matches persisted state must not read as stuck.
+  run bash -c "source '$SCRIPT_DIR/state.sh'; update_field '$STATE' previous_signature 'deadbeef'; validate_terminal_audit '$STATE' stuck"
+  [ "$status" -ne 0 ]
+}
