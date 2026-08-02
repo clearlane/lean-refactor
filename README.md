@@ -8,7 +8,7 @@ Don't use it for single-file cleanup, one-function bug fixes, new features, or c
 
 - `bash`
 - `jq`
-- A Claude Code or OpenCode-compatible agent with skill and subagent support
+- An agent runtime with skill discovery, bounded worker delegation, and local command execution
 - The `compound-engineering` plugin for its `ce-*` agents and commands
 
 Missing plugin capabilities have documented fallbacks in [`SKILL.md`](SKILL.md). Discovery can use general-purpose agents with prompts from `references/discovery-agent-prompts.md`. Git, worktree, review, planning, and pattern write-up steps can use native tools or the listed manual paths.

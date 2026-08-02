@@ -19,9 +19,9 @@ Read `references/methodology.md` for discovery through integration procedure, `r
 
 This skill is designed around the `compound-engineering` plugin, which supplies the `ce-*` subagents and the `/ce-*` slash commands referenced throughout.
 
-`jq` must be installed and available on `PATH`; the Stop hook uses it to read Claude Code hook input and JSONL transcripts.
+`jq` must be installed and available on `PATH`; the bundled host stop adapter uses it to parse lifecycle input and transcript records.
 
-Verify plugin availability before Phase 0: run `/plugins` and confirm `compound-engineering` is listed. Also verify each required subagent and command is exposed through the current Claude Code capability surface. Invoke a `/ce-*` command only through a supported skill/command tool; never assume nested slash-command execution. When direct invocation is unavailable, execute the documented native fallback below. If a `ce-*` subagent or `/ce-*` command is unavailable, the workflow still runs with these fallbacks:
+Before Phase 0, use the host's capability-discovery surface to confirm `compound-engineering` and each required worker/command are available. Invoke a `/ce-*` operation only through a supported skill or command adapter; never assume nested slash-command execution. When direct invocation is unavailable, execute the documented native fallback below. If a `ce-*` worker or `/ce-*` command is unavailable, the workflow still runs with these fallbacks:
 
 | Missing | Fallback |
 |---|---|
@@ -149,7 +149,7 @@ Dispatch `compound-engineering:ce-learnings-researcher` **alone and first**, and
 
 ### Phase 2: Parallel Discovery via CE Specialist Agents
 
-**Parallelisation is mandatory.** Once the Phase 1b prior-art brief is in hand, spawn all remaining specialist agents in **a single assistant message** containing multiple calls to the available Claude Code subagent delegation tool (`Task` in standard Claude Code), each with the listed `subagent_type`, with the prior-art summary embedded in every prompt. The agents run concurrently. Sequential dispatch defeats the leverage promise.
+**Parallelisation is mandatory.** Once the Phase 1b prior-art brief is in hand, use the host's bounded parallel delegation primitive to start all remaining specialist workers together, each with the corresponding worker identity and the prior-art summary embedded in its input. Sequential dispatch defeats the leverage promise. After all layer results return, concatenate their complete artifacts and record that aggregate through `scripts/workflow.sh discovery <STATE> --stage layers --artifact <FILE>`.
 
 Prefer compound-engineering specialist subagents over the generic `general-purpose` agent — they apply project-aware lenses by default.
 
@@ -180,7 +180,7 @@ For domain-specific layers also include:
 
 Use the templates in `references/discovery-agent-prompts.md`. For agent-sizing guidance, see the `Agent Sizing & Quota Resilience` section below.
 
-When agents are expected to take more than a couple of minutes, use `run_in_background: true` so the orchestrator can stage other work while they run. Never poll — the harness notifies on completion.
+When workers are expected to take more than a couple of minutes, use the host's asynchronous/background execution when available so the coordinator can stage independent work. Prefer completion notifications over tight polling.
 
 ### Phase 3: Cross-cutting Synthesis + Rank
 
@@ -215,8 +215,8 @@ Why mandatory:
 - Re-runs read prior audit files first to skip already-resolved findings
 
 Optionally also create platform issues. Both are external integrations — check availability before invoking, and skip silently if absent:
-- **GitHub** (optional; requires the GitHub MCP server): use `mcp__github__create_issue` per Tier 1+2 finding (title = finding heading; body = the audit-file section). Attach a `lean-refactor` label.
-- **Plane.so** (optional; requires the `plane` skill to be installed): use the `plane` skill to create work items in the project's "Refactor" cycle.
+- **GitHub** (optional): use an available authenticated GitHub issue capability per Tier 1+2 finding (title = finding heading; body = the audit-file section). Attach a `lean-refactor` label.
+- **Plane.so** (optional): use an available authenticated Plane capability to create work items in the project's "Refactor" cycle.
 
 If the repo has a project tracker, prefer it — issues are searchable and assignable. If not, the markdown file is the SSOT.
 
@@ -307,7 +307,7 @@ In Git mode, commit the audit alone as a dedicated metadata boundary through `/c
 | 1 — frame scope | `compound-engineering:ce-repo-research-analyst` | Map conventions for unfamiliar codebases |
 | 1b — prior art | `compound-engineering:ce-learnings-researcher` | Surface `docs/solutions/` entries to skip |
 | 2 — discovery | `compound-engineering:ce-pattern-recognition-specialist`, `ce-maintainability-reviewer`, `ce-architecture-strategist`, plus domain-specific reviewers | Specialist layer scans (parallel) |
-| 4 — file findings | (write to `docs/audits/`) plus optional `mcp__github__create_issue` or `plane` skill | Persist findings outside conversation context |
+| 4 — file findings | write to `docs/audits/`; optional project-tracker adapter | Persist findings outside conversation context |
 | 5 — approval | (user prompt) | Tier selection |
 | 6 — repair | `/ce-worktree` per boundary, then parallel non-conflicting subagent delegation calls | Isolated atomic consolidations |
 | 6.5 — pre-commit review | `/ce-code-review` | Tiered persona review of repair diffs |
@@ -334,10 +334,10 @@ Full state-file schema, hook decision logic, re-entrance handling, and rationali
 
 ## Parallelisation Rules (load-bearing)
 
-- **Discovery**: ALL Phase 2 discovery agents in ONE assistant message. Multiple subagent delegation calls in the same response. This excludes the blocking Phase 1b `ce-learnings-researcher`, which runs alone and is awaited first. Sequential Phase 2 dispatch defeats the workflow.
-- **Repair**: ALL non-conflicting boundaries in ONE assistant message. Conflicts (two scopes touching the same file) run sequentially with a `blockedBy` declaration.
-- **Verification**: lint / test runs per file are CPU-bound — also run in parallel via `Bash` tool with multiple invocations in one message.
-- **Background mode**: when discovery agents are expected to take >2 minutes, use `run_in_background: true`. Never poll — the harness notifies on completion.
+- **Discovery**: Start all Phase 2 discovery workers through one bounded parallel host operation. This excludes the blocking Phase 1b prior-art worker, which runs alone and is awaited first. Sequential Phase 2 dispatch defeats the workflow.
+- **Repair**: Start all non-conflicting boundaries through one bounded parallel host operation. Conflicts (two scopes touching the same file) run sequentially with an explicit dependency declaration.
+- **Verification**: Independent lint/test commands may run through the host's bounded parallel execution primitive.
+- **Background mode**: when discovery workers are expected to take more than two minutes, use asynchronous execution when supported and rely on completion notification rather than tight polling.
 - **Sizing**: split repair agents that would touch >10 files or >500 LOC; declare `blockedBy` for sequencing.
 
 If the orchestrator finds itself dispatching agents one-at-a-time across multiple turns, STOP and re-dispatch as a parallel batch.
