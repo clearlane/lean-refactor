@@ -36,53 +36,23 @@ if ! validate_state "$matching"; then
   exit 0
 fi
 
-iteration=$(parse_field "$matching" iteration)
-max_iterations=$(parse_field "$matching" max_iterations)
-failure_count=$(parse_field "$matching" failure_count)
-failure_limit=$(parse_field "$matching" failure_limit)
 session_id=$(parse_field "$matching" session_id)
-scope=$(parse_field "$matching" scope_path)
-audit=$(parse_field "$matching" audit_file)
-approval=$(parse_field "$matching" approval_status)
-tier=$(parse_field "$matching" tier_floor)
-if ((failure_count >= failure_limit)); then
-  echo "Lean-Refactor: failure limit reached; evidence preserved: $matching" >&2
-  exit 0
-fi
 if ! last_output=$(jq -rs '[.[] | select(.role == "assistant" or (.message.role? == "assistant"))] | if length == 0 then "" else (last | if .message then .message else . end | .content | map(select(.type == "text") | .text) | join("\n")) end' "$transcript" 2>/dev/null); then
   increment_failure "$matching" "transcript extraction failed" || true
   block "Transcript extraction failed. Evidence preserved: $matching"
   exit 0
 fi
-
-marker=""
-grep -qx '<lean-refactor-complete>' <<<"$last_output" && marker=complete
-grep -qx '<lean-refactor-stuck>' <<<"$last_output" && marker=stuck
-if [[ -n "$marker" ]]; then
-  if validate_terminal_audit "$matching" "$marker"; then
-    ledger=$(parse_field "$matching" boundary_ledger)
-    discovery=$(parse_field "$matching" discovery_ledger)
-    rm -f "$matching" "$ledger" "$discovery"
-    exit 0
-  fi
-  increment_failure "$matching" "unsupported $marker marker" || true
-  block "Marker rejected: audit-backed $marker evidence missing, stale, or invalid. State preserved: $matching"
+last_output_file=$(mktemp)
+trap 'rm -f "$last_output_file"' EXIT
+printf '%s\n' "$last_output" >"$last_output_file"
+result=$("$SCRIPT_DIR/workflow.sh" advance "$matching" --last-output "$last_output_file") || {
+  block "Coordinator advance failed. State preserved: $matching"
   exit 0
-fi
-if ((iteration >= max_iterations)); then
-  echo "Lean-Refactor: max iterations reached; state preserved: $matching" >&2
-  exit 0
-fi
-if ! validate_wave "$matching"; then
-  increment_failure "$matching" "expected-wave manifest missing, stale, or incomplete" || true
-  block "Continuation rejected: persisted expected-wave manifest/status is missing, stale, or incomplete. State preserved: $matching"
-  exit 0
-fi
-
-next=$((iteration + 1))
-update_field "$matching" iteration "$next"
-update_field "$matching" failure_count 0
-update_field "$matching" last_failure ""
-update_field "$matching" phase discovery
-reason="Resume canonical lean-refactor workflow from SKILL.md. State: $matching; root: $root; scope: $scope; audit: ${audit:-unset}; iteration: $next/$max_iterations; tier floor: $tier; approval: $approval. Validate persisted approval, expected-wave status, signatures, and evidence before repair."
-jq -n --arg reason "$reason" --arg message "Lean-Refactor $next/$max_iterations | $session_id" '{decision:"block",reason:$reason,systemMessage:$message}'
+}
+outcome=$(sed -n 's/^outcome=//p' <<<"$result" | tail -n 1)
+reason=$(sed -n 's/^reason=//p' <<<"$result" | tail -n 1)
+case "$outcome" in
+  deny) jq -n --arg reason "$reason" --arg message "Lean-Refactor | $session_id" '{decision:"block",reason:$reason,systemMessage:$message}' ;;
+  continue) [[ -z "$reason" ]] || echo "Lean-Refactor: $reason" >&2 ;;
+  *) block "Coordinator returned invalid outcome. State preserved: $matching" ;;
+esac

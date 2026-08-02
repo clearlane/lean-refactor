@@ -99,4 +99,8 @@ empty_signature=$(printf '' | sha256_stream)
 "$SCRIPT_DIR/workflow.sh" conclude-discovery "$complete_state" "$complete_audit" \
   --manifest "$tmp/wave" --current-signature "$empty_signature" --repair-ready-count 0 >/dev/null
 validate_terminal_audit "$complete_state" complete
+printf '<lean-refactor-complete>\n' >"$tmp/last-output"
+advance_result=$("$SCRIPT_DIR/workflow.sh" advance "$complete_state" --last-output "$tmp/last-output")
+[[ "$advance_result" == *'terminal=complete'* ]]
+[[ ! -e "$complete_state" ]]
 printf 'Lifecycle self-check: PASS\n'

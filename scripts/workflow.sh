@@ -14,6 +14,7 @@ Commands:
   boundary <STATE> <record-boundary-result options>
   finalize <STATE> <AUDIT> <record-wave options>
   conclude-discovery <STATE> <AUDIT> <conclude-discovery options>
+  advance <STATE> --last-output FILE
   status <STATE>
   cancel [--root PATH] [SESSION_ID]
 EOF
@@ -33,6 +34,7 @@ case "$command_name" in
   boundary) exec "$SCRIPT_DIR/record-boundary-result.sh" "$@" ;;
   finalize) exec "$SCRIPT_DIR/record-wave.sh" "$@" ;;
   conclude-discovery) exec "$SCRIPT_DIR/conclude-discovery.sh" "$@" ;;
+  advance) exec "$SCRIPT_DIR/advance-loop.sh" "$@" ;;
   status)
     [[ $# -eq 1 ]] || {
       usage

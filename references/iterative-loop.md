@@ -45,7 +45,7 @@ Finalize only after repair and verification complete. Command requires pending s
 
 ## Stop hook
 
-Hook reads JSON stdin, identifies exact session from transcript, then validates state. Continuation requires persisted `expected_wave_status=complete` and a current manifest hash matching persisted path/hash before incrementing iteration and returning the session to `rediscovery`. Hook infrastructure failure limit is `2`; it stops continuation and preserves evidence. Per-boundary repair and verification budgets live in the boundary ledger and default to `2` each.
+The host hook is a thin event adapter: it parses hook JSON, identifies the exact session and last assistant output, then calls `scripts/workflow.sh advance`. The coordinator owns marker validation, failure limits, iteration increments, terminal cleanup, and the transition back to `discovery`. Continuation requires persisted `expected_wave_status=complete` and a current manifest hash matching the persisted path/hash. Hook infrastructure failure limit is `2`; it stops continuation and preserves evidence. Per-boundary repair and verification budgets live in the boundary ledger and default to `2` each.
 
 Assistant marker alone has no authority. Audit must append machine-readable lines:
 
