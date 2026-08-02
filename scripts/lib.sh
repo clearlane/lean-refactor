@@ -165,7 +165,7 @@ boundary_ledger_ready() {
   local state="$1" ledger
   validate_boundary_ledger "$state" || return 1
   ledger=$(parse_field "$state" boundary_ledger)
-  jq -e '[.boundaries[] | select(.status == "pending")] | length == 0' "$ledger" >/dev/null
+  jq -e '[.boundaries[] | select(.status != "completed")] | length == 0' "$ledger" >/dev/null
 }
 
 update_field() {

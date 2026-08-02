@@ -58,4 +58,23 @@ if validate_terminal_audit "$state" stuck; then exit 1; fi
 update_field "$state" approval_status approved
 printf 'stale\n' >>"$tmp/evidence"
 if validate_terminal_audit "$state" stuck; then exit 1; fi
+
+blocked_root="$tmp/blocked-repo"
+mkdir -p "$blocked_root"
+printf 'source\n' >"$blocked_root/source.txt"
+"$SCRIPT_DIR/workflow.sh" init "$blocked_root" --code-only >"$tmp/blocked-setup.out"
+blocked_state=$(sed -n 's/^State: //p' "$tmp/blocked-setup.out")
+blocked_audit="$blocked_root/audit.md"
+printf '# Audit\n' >"$blocked_audit"
+"$SCRIPT_DIR/workflow.sh" approve "$blocked_state" "$blocked_audit" --approver tester --findings B1 --tier 1 \
+  --baseline-result "$tmp/baseline" --reference-inventory "$tmp/refs" \
+  --evidence "$tmp/classification" --classification "$tmp/classification" \
+  --boundary-diff "$tmp/boundary" --state-impact "$tmp/state-impact" \
+  --external-impact "$tmp/external-impact" --wave-manifest "$tmp/wave" >/dev/null
+"$SCRIPT_DIR/workflow.sh" boundary "$blocked_state" --boundary B1 --kind repair --result failed --manifest "$boundary_manifest" >/dev/null
+"$SCRIPT_DIR/workflow.sh" boundary "$blocked_state" --boundary B1 --kind repair --result failed --manifest "$boundary_manifest" >/dev/null
+if boundary_ledger_ready "$blocked_state"; then exit 1; fi
+if "$SCRIPT_DIR/workflow.sh" boundary "$blocked_state" --boundary B1 --kind repair --result completed --manifest "$boundary_manifest" >/dev/null 2>&1; then exit 1; fi
+if "$SCRIPT_DIR/workflow.sh" finalize "$blocked_state" "$blocked_audit" --manifest "$tmp/wave" \
+  --current-signature "$signature" --repair-ready-count 0 --approval-required no >/dev/null 2>&1; then exit 1; fi
 printf 'Lifecycle self-check: PASS\n'

@@ -60,7 +60,7 @@ validate_approval_envelope "$state" || {
   exit 1
 }
 boundary_ledger_ready "$state" || {
-  echo "Error: one or more boundary results remain pending or invalid" >&2
+  echo "Error: every approved boundary must complete repair and verification" >&2
   exit 1
 }
 next_state="${state}.tmp.$$"
