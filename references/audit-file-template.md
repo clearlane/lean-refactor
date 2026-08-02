@@ -18,7 +18,7 @@ persistence: durable:<path> | blocked:<reason>
 baseline_fingerprint: <HEAD/tree or snapshot hashes>
 dirty_tree_decision: clean | user-stashed-before-init | user-committed-before-init | code-only-explicit
 agents_dispatched:
-  - ce-learnings-researcher # completed first
+  - prior-art-researcher # completed first
   - <parallel layer reviewers>
   - cross-cutting-synthesis # dispatched after layer reports
 ---
@@ -161,9 +161,9 @@ agents_dispatched:
 
 ...
 
-## Tier 4 — defer to /ce-plan
+## Tier 4 — defer to dedicated planning
 
-Findings that require larger structural decisions or design discussion. Each entry should have enough context for `/ce-plan` to take it forward.
+Findings that require larger structural decisions or design discussion. Each entry should have enough context for a dedicated planning workflow to take it forward.
 
 - 4.A: <title> — <one-paragraph reason for deferral>
 
@@ -213,7 +213,7 @@ sorted sets mean no progress — emit `<lean-refactor-stuck>`.
 - YYYY-MM-DD HH:MM — Approval persisted for `<IDs>` at `<fingerprint>`
 - YYYY-MM-DD HH:MM — Boundary worktrees created: `<paths>`
 - YYYY-MM-DD HH:MM — Commits landed: `<hashes>`
-- YYYY-MM-DD HH:MM — Phase 8 `/ce-compound` captured patterns to `docs/solutions/<file>.md`
+- YYYY-MM-DD HH:MM — Learning-capture capability recorded patterns in `docs/solutions/<file>.md`
 ```
 
 ## Tips
@@ -222,5 +222,5 @@ sorted sets mean no progress — emit `<lean-refactor-stuck>`.
 - **Legacy-path disposition per finding** — record complete removal by default. Include the temporary compatibility exception block only after explicit approval, with all four Hard-Cut Policy exception fields and its ADR/task added in the same diff.
 - **Leverage column in tables** — surfaces the formula at a glance for the user during the approval gate.
 - **Worked excerpts under each finding** — the orchestrator's value is the synthesis; the agents supply raw observations. Don't lose them.
-- **Tier 4 separate section** — these escalate to `/ce-plan`; keep them visible but separate so a future `/ce-plan` invocation can read just that section.
+- **Tier 4 separate section** — these escalate to dedicated planning; keep them visible but separate so a future planning workflow can read just that section.
 - **Execution log** — append-only timeline. Useful when the run spans multiple sessions.

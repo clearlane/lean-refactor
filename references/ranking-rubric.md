@@ -58,7 +58,7 @@ Buckets are mutually exclusive — `effort` alone decides which tier a finding c
 - **Tier 1** — `effort = 1` AND (`leverage ≥ 4` OR `drift_hazard = 3`)
 - **Tier 2** — `effort = 2` AND (`leverage ≥ 6` OR `drift_hazard = 3`)
 - **Tier 3** — `effort = 3` AND (`leverage ≥ 12` OR `drift_hazard = 3`)
-- **Tier 4** — `effort = 4` (defer to `/ce-plan`)
+- **Tier 4** — `effort = 4` (defer to a dedicated planning workflow)
 
 A finding below its tier's leverage threshold with `drift_hazard < 3` is not tiered — it goes to the audit file's long tail.
 
@@ -88,7 +88,7 @@ A finding below its tier's leverage threshold with `drift_hazard < 3` is not tie
 - `drift_hazard_severity = 2` (silent breakage if shape evolves)
 - `effort = 4` (requires PHPStan investment + typed shape contracts)
 - `leverage = (1 × 2) / 4 = 0.5`
-- **Tier 4** — defer to `/ce-plan`
+- **Tier 4** — defer to a dedicated planning workflow
 
 ### Example 4: `EF_Voxel_Templates` constants
 

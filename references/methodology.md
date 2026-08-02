@@ -19,7 +19,7 @@ Example scope map:
 3. Wait for every report.
 4. Run cross-cutting synthesis later over complete reports.
 
-Record the prior-art, complete aggregate layer-report, synthesis, and persisted audit artifacts through `workflow.sh discovery`. The coordinator rejects missing or out-of-order checkpoints. Use the preferred `compound-engineering` specialists named in `discovery-agent-prompts.md`; when unavailable, use a bounded general-purpose worker with the same contract. Use the host's bounded parallel primitive for independent layer scans and completion notifications for longer work.
+Record the prior-art, complete aggregate layer-report, synthesis, and persisted audit artifacts through `workflow.sh discovery`. The coordinator rejects missing or out-of-order checkpoints. Use host-native specialists matching the capability roles in `discovery-agent-prompts.md`; when unavailable, use a bounded general-purpose worker with the same contract. Use the host's bounded parallel primitive for independent layer scans and completion notifications for longer work.
 
 Layer reports preserve full provenance/raw artifacts, complete dynamic/indirect and persisted-store surfaces, canonical `confirmed|suspected|blocked` evidence, and semantic-equivalence analysis. Synthesis records conflict reconciliation and score justifications; it never races scans it consumes.
 

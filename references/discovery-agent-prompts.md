@@ -6,18 +6,18 @@ Templates supplement canonical workflow in `../SKILL.md`; they do not redefine a
 
 Run prior-art discovery first. After it returns, dispatch all layer scans in one parallel batch. Run cross-cutting synthesis **later**, after every layer report exists; give it complete reports or staged `master.md`. Never run synthesis in parallel with scans it must synthesize.
 
-Recommended specialists:
+Recommended capability roles:
 
-| Lens | `subagent_type` |
+| Lens | Worker capability |
 |---|---|
-| Prior art | `compound-engineering:ce-learnings-researcher` |
-| Pattern duplication | `compound-engineering:ce-pattern-recognition-specialist` |
-| Maintainability | `compound-engineering:ce-maintainability-reviewer` |
-| Architecture | `compound-engineering:ce-architecture-strategist` |
-| Framework practice | `compound-engineering:ce-best-practices-researcher` |
-| Cross-cutting synthesis | `general-purpose` |
+| Prior art | Repository-history and prior-solution research |
+| Pattern duplication | Pattern-recognition and semantic-equivalence review |
+| Maintainability | Maintainability and complexity review |
+| Architecture | Architecture and ownership-boundary review |
+| Framework practice | Framework-native best-practice review |
+| Cross-cutting synthesis | General-purpose synthesis over completed reports |
 
-Use matching domain reviewer from `SKILL.md` where relevant. If specialist is unavailable, use `general-purpose` with same evidence contract.
+Select the closest host-native specialist where relevant. If none is available, use a general-purpose worker with the same evidence contract.
 
 ## Prior-art fallback
 

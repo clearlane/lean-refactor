@@ -22,7 +22,7 @@ Outputs:
 - Ranked atomic boundaries with canonicality proof and reproducible evidence.
 - For approved mutations: isolated repairs, verification artifacts, commits when authorized, and convergence evidence.
 
-`jq` and Bash are required for resumable runs. The optional `compound-engineering` plugin supplies preferred specialist workers and commands; use the fallbacks in [methodology.md](references/methodology.md) when a capability is unavailable.
+`jq` and Bash are required for resumable runs. Use host-native bounded delegation, review, planning, and learning-capture capabilities when available; [methodology.md](references/methodology.md) defines capability-based fallbacks without requiring a particular runtime or plugin.
 
 ## Coordinator Entry
 
