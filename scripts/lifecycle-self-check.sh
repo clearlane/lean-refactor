@@ -14,6 +14,10 @@ printf '# Audit\n' >"$audit"
 for artifact in baseline refs evidence classification boundary state-impact external-impact wave; do
   printf '%s\n' "$artifact" >"$tmp/$artifact"
 done
+for stage in prior-art layers synthesis audit; do
+  printf '%s\n' "$stage" >"$tmp/$stage"
+  "$SCRIPT_DIR/workflow.sh" discovery "$state" --stage "$stage" --artifact "$tmp/$stage" >/dev/null
+done
 "$SCRIPT_DIR/workflow.sh" approve "$state" "$audit" --approver tester --conditions none --findings F1 --tier 1 \
   --baseline-result "$tmp/baseline" --reference-inventory "$tmp/refs" \
   --evidence "$tmp/evidence" --classification "$tmp/classification" \
@@ -66,6 +70,9 @@ printf 'source\n' >"$blocked_root/source.txt"
 blocked_state=$(sed -n 's/^State: //p' "$tmp/blocked-setup.out")
 blocked_audit="$blocked_root/audit.md"
 printf '# Audit\n' >"$blocked_audit"
+for stage in prior-art layers synthesis audit; do
+  "$SCRIPT_DIR/workflow.sh" discovery "$blocked_state" --stage "$stage" --artifact "$tmp/$stage" >/dev/null
+done
 "$SCRIPT_DIR/workflow.sh" approve "$blocked_state" "$blocked_audit" --approver tester --findings B1 --tier 1 \
   --baseline-result "$tmp/baseline" --reference-inventory "$tmp/refs" \
   --evidence "$tmp/classification" --classification "$tmp/classification" \
@@ -85,6 +92,9 @@ printf 'source\n' >"$complete_root/source.txt"
 complete_state=$(sed -n 's/^State: //p' "$tmp/complete-setup.out")
 complete_audit="$complete_root/audit.md"
 printf '# Audit\n' >"$complete_audit"
+for stage in prior-art layers synthesis audit; do
+  "$SCRIPT_DIR/workflow.sh" discovery "$complete_state" --stage "$stage" --artifact "$tmp/$stage" >/dev/null
+done
 empty_signature=$(printf '' | sha256_stream)
 "$SCRIPT_DIR/workflow.sh" conclude-discovery "$complete_state" "$complete_audit" \
   --manifest "$tmp/wave" --current-signature "$empty_signature" --repair-ready-count 0 >/dev/null

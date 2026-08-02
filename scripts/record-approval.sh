@@ -31,8 +31,12 @@ validate_state "$state" || {
   echo "Error: invalid state: $state" >&2
   exit 1
 }
-[[ "$(parse_field "$state" phase)" =~ ^(discovery|rediscovery)$ ]] || {
-  echo "Error: approval is valid only after discovery" >&2
+[[ "$(parse_field "$state" phase)" == audit_ready ]] || {
+  echo "Error: approval requires completed prior-art, layer-scan, synthesis, and audit checkpoints" >&2
+  exit 1
+}
+validate_discovery_ledger "$state" || {
+  echo "Error: discovery ledger is invalid" >&2
   exit 1
 }
 [[ "$audit" == /* && -f "$audit" && -n "$approver" && "$findings" =~ ^[A-Za-z0-9._-]+(,[A-Za-z0-9._-]+)*$ && "$tier" =~ ^[1-4]$ ]] || {

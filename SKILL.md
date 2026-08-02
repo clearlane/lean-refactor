@@ -11,7 +11,7 @@ The skill uses an executable lifecycle coordinator for durable phase, approval, 
 
 ## Coordinator Entry
 
-For mutating or resumable runs, invoke `scripts/workflow.sh init [SCOPE] [--max-iterations N] [--tier-floor 1|2|3|4] [--code-only]`. Keep the returned state path and use only the coordinator commands `approve`, `verify-approval`, `boundary`, `finalize`, `conclude-discovery`, `status`, and `cancel` for workflow transitions. The scripts validate transition order and own mutable workflow state; workers return evidence and never edit it. Use `conclude-discovery` only when verified rediscovery has zero repair-ready findings; it creates the audit-backed evidence required for `<lean-refactor-complete>`.
+For mutating or resumable runs, invoke `scripts/workflow.sh init [SCOPE] [--max-iterations N] [--tier-floor 1|2|3|4] [--code-only]`. Keep the returned state path and use only the coordinator commands `discovery`, `approve`, `verify-approval`, `boundary`, `finalize`, `conclude-discovery`, `status`, and `cancel` for workflow transitions. Record the blocking `prior-art`, parallel `layers`, later `synthesis`, and persisted `audit` artifacts through `workflow.sh discovery` in that order. The scripts validate ordering and own mutable workflow state; workers return artifacts and never edit it. Use `conclude-discovery` only after the audit checkpoint proves zero repair-ready findings; it creates the audit-backed evidence required for `<lean-refactor-complete>`.
 
 Read `references/methodology.md` for discovery through integration procedure, `references/iterative-loop.md` for state and resume contracts, and `references/repair-agent-prompt.md` when delegating one approved atomic repair.
 

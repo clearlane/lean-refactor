@@ -8,6 +8,7 @@ Usage: workflow.sh <command> [arguments]
 
 Commands:
   init [SCOPE] [--max-iterations N] [--tier-floor N] [--code-only]
+  discovery <STATE> --stage prior-art|layers|synthesis|audit --artifact FILE
   approve <STATE> <AUDIT> <record-approval options>
   verify-approval <STATE>
   boundary <STATE> <record-boundary-result options>
@@ -26,6 +27,7 @@ command_name="$1"
 shift
 case "$command_name" in
   init) exec "$SCRIPT_DIR/setup-loop.sh" "$@" ;;
+  discovery) exec "$SCRIPT_DIR/record-discovery-stage.sh" "$@" ;;
   approve) exec "$SCRIPT_DIR/record-approval.sh" "$@" ;;
   verify-approval) exec "$SCRIPT_DIR/verify-approval.sh" "$@" ;;
   boundary) exec "$SCRIPT_DIR/record-boundary-result.sh" "$@" ;;

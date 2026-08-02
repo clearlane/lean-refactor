@@ -39,7 +39,7 @@ For iterative runs, use the coordinator entrypoint:
 scripts/workflow.sh init [SCOPE] [--max-iterations N] [--tier-floor 1|2|3|4] [--code-only]
 ```
 
-The coordinator writes local state and a per-boundary ledger. Use its `approve`, `verify-approval`, `boundary`, `finalize`, `conclude-discovery`, `status`, and `cancel` commands for transitions. `conclude-discovery` is the zero-findings convergence path. Initialization doesn't register the continuation adapter; when the host supports stop hooks, register the absolute path to `scripts/stop-hook.sh` and pass its documented JSON input. Without that adapter, runs are single-turn and must not claim automatic continuation.
+The coordinator writes local state, a discovery-checkpoint ledger, and a per-boundary ledger. Use its `discovery`, `approve`, `verify-approval`, `boundary`, `finalize`, `conclude-discovery`, `status`, and `cancel` commands for transitions. `conclude-discovery` is the zero-findings convergence path. Initialization doesn't register the continuation adapter; when the host supports stop hooks, register the absolute path to `scripts/stop-hook.sh` and pass its documented JSON input. Without that adapter, runs are single-turn and must not claim automatic continuation.
 
 ## Vendored skill pinning
 

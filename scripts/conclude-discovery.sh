@@ -37,8 +37,12 @@ validate_state "$state" || {
   echo "Error: invalid state: $state" >&2
   exit 1
 }
-[[ "$(parse_field "$state" phase)" =~ ^(discovery|rediscovery)$ ]] || {
-  echo "Error: discovery conclusion is not valid in current phase" >&2
+[[ "$(parse_field "$state" phase)" == audit_ready ]] || {
+  echo "Error: discovery conclusion requires completed discovery checkpoints" >&2
+  exit 1
+}
+validate_discovery_ledger "$state" || {
+  echo "Error: discovery ledger is invalid" >&2
   exit 1
 }
 [[ "$audit" == /* && -f "$audit" && "$manifest" == /* && -f "$manifest" ]] || {

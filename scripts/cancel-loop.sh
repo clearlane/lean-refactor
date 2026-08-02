@@ -50,7 +50,8 @@ while IFS= read -r file; do
     continue
   fi
   ledger=$(parse_field "$file" boundary_ledger)
-  rm -f "$file" "$ledger"
+  discovery=$(parse_field "$file" discovery_ledger)
+  rm -f "$file" "$ledger" "$discovery"
   echo "Cancelled session: $sid"
 done < <(list_state_files "$root")
 
