@@ -51,8 +51,10 @@ if boundary_ledger_ready "$state"; then exit 1; fi
 write_boundary_manifest "$boundary_manifest" F1 2 completed
 "$SCRIPT_DIR/workflow.sh" boundary "$state" --boundary F1 --kind repair --result completed --manifest "$boundary_manifest" >/dev/null
 if boundary_ledger_ready "$state"; then exit 1; fi
+if "$SCRIPT_DIR/workflow.sh" boundary "$state" --boundary F1 --kind repair --result completed --manifest "$boundary_manifest" >/dev/null 2>&1; then exit 1; fi
 write_boundary_manifest "$boundary_manifest" F1 1 completed
 "$SCRIPT_DIR/workflow.sh" boundary "$state" --boundary F1 --kind verification --result completed --manifest "$boundary_manifest" >/dev/null
+if "$SCRIPT_DIR/workflow.sh" boundary "$state" --boundary F1 --kind verification --result completed --manifest "$boundary_manifest" >/dev/null 2>&1; then exit 1; fi
 boundary_ledger_ready "$state"
 signature=$(printf 'F1' | sha256_stream)
 "$SCRIPT_DIR/workflow.sh" finalize "$state" "$audit" --manifest "$tmp/wave" \

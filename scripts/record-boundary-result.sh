@@ -88,6 +88,11 @@ existing_status=$(jq -r --arg id "$boundary" '.boundaries[$id].status' "$ledger"
   echo "Error: boundary failure budget is exhausted: $boundary" >&2
   exit 1
 }
+stage_status=$(jq -r --arg id "$boundary" --arg kind "$kind" '.boundaries[$id][($kind + "_status")]' "$ledger")
+[[ "$stage_status" != completed ]] || {
+  echo "Error: boundary stage is already completed: $boundary/$kind" >&2
+  exit 1
+}
 if [[ "$kind" == verification ]]; then
   [[ "$(jq -r --arg id "$boundary" '.boundaries[$id].repair_status' "$ledger")" == completed ]] || {
     echo "Error: verification requires completed repair: $boundary" >&2
@@ -96,11 +101,13 @@ if [[ "$kind" == verification ]]; then
 fi
 if [[ "$kind" == repair ]]; then
   expected_attempt=$(($(jq -r --arg id "$boundary" '.boundaries[$id].repair_attempts' "$ledger") + 1))
-  [[ "$(jq -r '.attempt' "$manifest")" == "$expected_attempt" ]] || {
-    echo "Error: repair manifest attempt does not match durable counter; expected $expected_attempt" >&2
-    exit 1
-  }
+else
+  expected_attempt=$(($(jq -r --arg id "$boundary" '.boundaries[$id].verification_failures' "$ledger") + 1))
 fi
+[[ "$(jq -r '.attempt' "$manifest")" == "$expected_attempt" ]] || {
+  echo "Error: $kind manifest attempt does not match durable counter; expected $expected_attempt" >&2
+  exit 1
+}
 next_ledger="${ledger}.tmp.$$"
 next_state="${state}.tmp.$$"
 backup_ledger="${ledger}.bak.$$"
