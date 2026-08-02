@@ -77,4 +77,16 @@ if boundary_ledger_ready "$blocked_state"; then exit 1; fi
 if "$SCRIPT_DIR/workflow.sh" boundary "$blocked_state" --boundary B1 --kind repair --result completed --manifest "$boundary_manifest" >/dev/null 2>&1; then exit 1; fi
 if "$SCRIPT_DIR/workflow.sh" finalize "$blocked_state" "$blocked_audit" --manifest "$tmp/wave" \
   --current-signature "$signature" --repair-ready-count 0 --approval-required no >/dev/null 2>&1; then exit 1; fi
+
+complete_root="$tmp/complete-repo"
+mkdir -p "$complete_root"
+printf 'source\n' >"$complete_root/source.txt"
+"$SCRIPT_DIR/workflow.sh" init "$complete_root" --code-only >"$tmp/complete-setup.out"
+complete_state=$(sed -n 's/^State: //p' "$tmp/complete-setup.out")
+complete_audit="$complete_root/audit.md"
+printf '# Audit\n' >"$complete_audit"
+empty_signature=$(printf '' | sha256_stream)
+"$SCRIPT_DIR/workflow.sh" conclude-discovery "$complete_state" "$complete_audit" \
+  --manifest "$tmp/wave" --current-signature "$empty_signature" --repair-ready-count 0 >/dev/null
+validate_terminal_audit "$complete_state" complete
 printf 'Lifecycle self-check: PASS\n'

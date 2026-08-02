@@ -12,6 +12,7 @@ Commands:
   verify-approval <STATE>
   boundary <STATE> <record-boundary-result options>
   finalize <STATE> <AUDIT> <record-wave options>
+  conclude-discovery <STATE> <AUDIT> <conclude-discovery options>
   status <STATE>
   cancel [--root PATH] [SESSION_ID]
 EOF
@@ -29,6 +30,7 @@ case "$command_name" in
   verify-approval) exec "$SCRIPT_DIR/verify-approval.sh" "$@" ;;
   boundary) exec "$SCRIPT_DIR/record-boundary-result.sh" "$@" ;;
   finalize) exec "$SCRIPT_DIR/record-wave.sh" "$@" ;;
+  conclude-discovery) exec "$SCRIPT_DIR/conclude-discovery.sh" "$@" ;;
   status)
     [[ $# -eq 1 ]] || {
       usage

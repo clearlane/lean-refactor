@@ -18,6 +18,8 @@ Schema covers identity/counters/mode/paths/baseline; the coordinator `phase`; au
 
 `phase` is the coordinator's durable transition owner and advances `discovery -> approved -> repair -> verification -> rediscovery`. Approval is valid only from `discovery` or `rediscovery`; boundary results and finalization are valid only from approved-or-later phases; finalization returns the session to `rediscovery`. Approver identity and any approval conditions are bound into the approval digest, so changing either invalidates approval.
 
+When discovery or rediscovery proves there are zero repair-ready findings, run `scripts/workflow.sh conclude-discovery <STATE> <AUDIT> --manifest FILE --current-signature SHA256 [--previous-signature SHA256] --repair-ready-count 0`. It binds the discovery evidence manifest, appends the current iteration's terminal audit fields, and enables the complete marker without manufacturing a new approval. Nonzero discovery cannot use this transition.
+
 The coordinator records each repair or verification outcome through `scripts/workflow.sh boundary`. Its JSON ledger owns separate repair-attempt and verification-failure counters, each limited to `2`, separate repair and verification statuses, aggregate boundary status, and the latest evidence manifest/hash. Retryable or failed results increment the relevant counter; exhaustion becomes terminal `blocked`. A boundary becomes `completed` only after both repair and verification complete. Ledger validation re-hashes the latest evidence manifests, and wave finalization requires every approved boundary to be `completed`; pending or blocked work cannot be represented as a successful wave. Workers receive the state path but never mutate workflow state themselves.
 
 ## Approval

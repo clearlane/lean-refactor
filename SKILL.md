@@ -11,7 +11,7 @@ The skill uses an executable lifecycle coordinator for durable phase, approval, 
 
 ## Coordinator Entry
 
-For mutating or resumable runs, invoke `scripts/workflow.sh init [SCOPE] [--max-iterations N] [--tier-floor 1|2|3|4] [--code-only]`. Keep the returned state path and use only the coordinator commands `approve`, `verify-approval`, `boundary`, `finalize`, `status`, and `cancel` for workflow transitions. The scripts validate transition order and own mutable workflow state; workers return evidence and never edit it.
+For mutating or resumable runs, invoke `scripts/workflow.sh init [SCOPE] [--max-iterations N] [--tier-floor 1|2|3|4] [--code-only]`. Keep the returned state path and use only the coordinator commands `approve`, `verify-approval`, `boundary`, `finalize`, `conclude-discovery`, `status`, and `cancel` for workflow transitions. The scripts validate transition order and own mutable workflow state; workers return evidence and never edit it. Use `conclude-discovery` only when verified rediscovery has zero repair-ready findings; it creates the audit-backed evidence required for `<lean-refactor-complete>`.
 
 Read `references/methodology.md` for discovery through integration procedure, `references/iterative-loop.md` for state and resume contracts, and `references/repair-agent-prompt.md` when delegating one approved atomic repair.
 
@@ -321,7 +321,7 @@ For Tier 4 findings escalated out of this run, hand off to `/ce-plan`.
 
 ## Iterative Loop
 
-From repo root, initialize through `scripts/workflow.sh init [SCOPE] [--max-iterations N] [--tier-floor 1|2|3|4] [--code-only]`; capture the printed session and state paths. Use the same coordinator for approval, boundary results, finalization, status, and cancellation. Iteration writes `.claude/lean-refactor.<session-id>.local.md` plus its boundary ledger and defaults to `max-iterations=10`, `tier-floor=2`. Continuation is active only when the host adapter registers `scripts/stop-hook.sh` at its stop lifecycle boundary and supplies the documented JSON payload. Setup does not register the adapter. Without it, the run is single-turn and must not claim automatic continuation.
+From repo root, initialize through `scripts/workflow.sh init [SCOPE] [--max-iterations N] [--tier-floor 1|2|3|4] [--code-only]`; capture the printed session and state paths. Use the same coordinator for approval, boundary results, wave finalization, zero-finding discovery conclusion, status, and cancellation. Iteration writes `.claude/lean-refactor.<session-id>.local.md` plus its boundary ledger and defaults to `max-iterations=10`, `tier-floor=2`. Continuation is active only when the host adapter registers `scripts/stop-hook.sh` at its stop lifecycle boundary and supplies the documented JSON payload. Setup does not register the adapter. Without it, the run is single-turn and must not claim automatic continuation.
 
 Two whole-line markers stop the loop (nothing else does):
 
