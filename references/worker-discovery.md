@@ -4,7 +4,7 @@ Templates supplement canonical workflow in `../SKILL.md`; they do not redefine a
 
 ## Dispatch contract
 
-Run prior-art discovery first. After it returns, dispatch all layer scans in one parallel batch. Run cross-cutting synthesis **later**, after every layer report exists; give it complete reports or staged `master.md`. Never run synthesis in parallel with scans it must synthesize.
+Run prior-art discovery first. After it returns, dispatch all layer scans in one parallel batch. Run cross-cutting synthesis **later**, after every layer report exists; give it the complete layer reports. Never run synthesis in parallel with scans it must synthesize.
 
 Recommended capability roles:
 
@@ -40,7 +40,7 @@ REPO_FRAME_ARTIFACT: {{REPO_FRAME_ARTIFACT_OR_NONE}}
 PRIOR_ART_BRIEF:
 {{PRIOR_ART_BRIEF}}
 
-Follow canonical workflow and Hard-Cut Policy in SKILL.md. Do not restate or weaken them.
+Follow the canonical workflow and the Safety and Evidence Invariants in SKILL.md. Do not restate or weaken them.
 
 Scan exhaustively; no top-N or word cap. Read complete relevant files. Enumerate complete reference surfaces required by SKILL.md, including dynamic/indirect references and persisted identifiers/stores. Do not infer completeness from a sample; an unqueryable relevant store is `blocked`.
 
@@ -90,7 +90,7 @@ Treat framework-specific patterns only as examples. Report only evidence-backed 
 SCOPE_ROOT: {{SCOPE_ROOT}}
 INPUT_REPORTS: {{REPORT_PATHS_OR_FULL_REPORTS}}
 
-All layer scans are complete. Follow SKILL.md Phase 3 and references/ranking.md. Do not search only for a presentation top-N and do not discard long-tail findings.
+All layer scans are complete. Follow the SKILL.md Execution Routing synthesis step and references/ranking.md. Do not search only for a presentation top-N and do not discard long-tail findings.
 
 Merge complete reference surfaces, deduplicate by semantic source and affected sites, and reconcile conflicts by recording source reports, disagreement, decision, and supporting evidence; unresolved conflicts remain suspected/blocked. Require semantic equivalence and justify every score component/tier. Flag shared-file boundaries. Produce exhaustive ranked findings and full provenance for audit persistence, or complete inline audit when SKILL.md selected read-only discovery.
 ```
