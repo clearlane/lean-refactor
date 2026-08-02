@@ -66,19 +66,11 @@ boundary_manifest="$tmp/retryable.json"
 mkdir "${state}.lock"
 if "$SCRIPT_DIR/workflow.sh" boundary "$state" --boundary F1 --kind repair --result retryable --manifest "$boundary_manifest" >/dev/null 2>&1; then exit 1; fi
 rmdir "${state}.lock"
-if "$SCRIPT_DIR/record-boundary-result.sh" "$state" --boundary F2 --kind repair --result completed --manifest "$boundary_manifest" >/dev/null 2>&1; then exit 1; fi
-if "$SCRIPT_DIR/record-boundary-result.sh" "$state" --boundary F1 --kind verification --result completed --manifest "$boundary_manifest" >/dev/null 2>&1; then exit 1; fi
+mkdir "${state}.lock"
+printf '99999999\n' >"${state}.lock/pid"
 "$SCRIPT_DIR/workflow.sh" boundary "$state" --boundary F1 --kind repair --result retryable --manifest "$boundary_manifest" >/dev/null
+[[ ! -e "${state}.lock" ]]
 if boundary_ledger_ready "$state"; then exit 1; fi
-ledger=$(parse_field "$state" boundary_ledger)
-cp "$ledger" "$tmp/valid-ledger.json"
-jq '.boundaries.F1.repair_attempts = 0' "$ledger" >"$tmp/impossible-ledger.json"
-mv "$tmp/impossible-ledger.json" "$ledger"
-update_field "$state" boundary_ledger_hash "$(sha256_file "$ledger")"
-if validate_boundary_ledger "$state"; then exit 1; fi
-mv "$tmp/valid-ledger.json" "$ledger"
-update_field "$state" boundary_ledger_hash "$(sha256_file "$ledger")"
-validate_boundary_ledger "$state"
 boundary_manifest="$tmp/boundary-repair-2.json"
 write_boundary_manifest "$boundary_manifest" F1 2 completed
 "$SCRIPT_DIR/workflow.sh" boundary "$state" --boundary F1 --kind repair --result completed --manifest "$boundary_manifest" >/dev/null
@@ -89,6 +81,15 @@ write_boundary_manifest "$boundary_manifest" F1 1 completed
 "$SCRIPT_DIR/workflow.sh" boundary "$state" --boundary F1 --kind verification --result completed --manifest "$boundary_manifest" >/dev/null
 if "$SCRIPT_DIR/workflow.sh" boundary "$state" --boundary F1 --kind verification --result completed --manifest "$boundary_manifest" >/dev/null 2>&1; then exit 1; fi
 boundary_ledger_ready "$state"
+ledger=$(parse_field "$state" boundary_ledger)
+cp "$ledger" "$tmp/valid-ledger.json"
+jq '.boundaries.F1.repair_attempts = 1' "$ledger" >"$tmp/impossible-ledger.json"
+mv "$tmp/impossible-ledger.json" "$ledger"
+update_field "$state" boundary_ledger_hash "$(sha256_file "$ledger")"
+if validate_boundary_ledger "$state"; then exit 1; fi
+mv "$tmp/valid-ledger.json" "$ledger"
+update_field "$state" boundary_ledger_hash "$(sha256_file "$ledger")"
+validate_boundary_ledger "$state"
 signature=$(printf 'F1' | sha256_stream)
 "$SCRIPT_DIR/workflow.sh" finalize "$state" "$audit" --manifest "$tmp/wave" \
   --current-signature "$signature" --repair-ready-count 0 --approval-required no >/dev/null

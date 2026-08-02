@@ -8,10 +8,21 @@ readonly COMPOUND_OPTIONAL_FIELDS="audit_file audit_hash approval_digest approva
 COMPOUND_STATE_LOCK=""
 
 acquire_state_lock() {
-  local file="$1" lock
+  local file="$1" lock owner stale
   [[ "$file" == /* && -d "$(dirname "$file")" ]] || return 1
   lock="${file}.lock"
-  mkdir "$lock" 2>/dev/null || return 1
+  if ! mkdir "$lock" 2>/dev/null; then
+    owner=$(sed -n '1p' "$lock/pid" 2>/dev/null || true)
+    [[ "$owner" =~ ^[1-9][0-9]*$ ]] || return 1
+    kill -0 "$owner" 2>/dev/null && return 1
+    stale="${lock}.stale.$$"
+    mv "$lock" "$stale" 2>/dev/null || return 1
+    if ! mkdir "$lock" 2>/dev/null; then
+      [[ -d "$lock" ]] && rm -rf "$stale"
+      return 1
+    fi
+    rm -rf "$stale"
+  fi
   COMPOUND_STATE_LOCK="$lock"
   printf '%s\n' "$$" >"$lock/pid"
 }
