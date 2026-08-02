@@ -128,9 +128,9 @@ Replace each manual `->set_placeholder()` matching the default's label.
 1. Identify the semantic name for the literal
 2. Create a constants class / module:
    ```php
-   class EF_Voxel_Templates {
-       public const POST_TITLE  = '@tags()@post(title)@endtags()';
-       public const POST_AUTHOR = '@tags()@post(author-name)@endtags()';
+   class Templates {
+       public const POST_TITLE  = '<canonical template literal>';
+       public const POST_AUTHOR = '<canonical template literal>';
    }
    ```
 3. Replace each literal with the named constant
@@ -141,18 +141,18 @@ Replace each manual `->set_placeholder()` matching the default's label.
 
 ---
 
-## Pattern 7: Twig Partials (or template fragments)
+## Pattern 7: Template Partials
 
-**Smell**: A 5–10 line fragment is duplicated across templates. Or a partial file exists but no `{% include %}` references it.
+**Smell**: A 5–10 line fragment is duplicated across templates. Or a partial file exists but no include directive references it.
 
 **Transform**:
-1. Extract the fragment into `templates/partials/X.html.twig`
-2. Replace each duplicate with `{% include 'partials/X' with { ... } %}`
+1. Extract the fragment into a partial under the project's template directory
+2. Replace each duplicate with the engine's include directive plus explicit context
 3. If an orphan partial exists, audit its content vs current duplicates and unify
 
 **Verification**: Rerun discovery-recorded fragment and include queries with unchanged root, scope, and exclusions; require baseline positive duplicate matches, post-repair zero legacy-fragment matches, and positive control matching canonical partial plus expected includes.
 
-**Compound effect**: New widget reusing the fragment = one include line, not 10 lines of copy-paste.
+**Compound effect**: New component reusing the fragment = one include line, not 10 lines of copy-paste.
 
 ---
 
@@ -206,7 +206,7 @@ Replace each manual `->set_placeholder()` matching the default's label.
 | Same private field + setter in N classes | 4 (trait) |
 | Manual placeholder restating default's label | 5 (default SSOT) |
 | Same literal string in N files | 6 (constant) |
-| Verbatim Twig fragment in N templates | 7 (partial) |
+| Verbatim fragment in N templates | 7 (partial) |
 | N constructors instantiating the same dependencies | 8 (declarative property) |
 | N method overrides calling the same flatten helper | 9 (auto-flatten) |
 

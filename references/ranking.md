@@ -66,41 +66,41 @@ A finding below its tier's leverage threshold with `drift_hazard < 3` is not tie
 
 ## Worked Examples
 
-### Example 1: `'+{n} tags'` literal duplicated with sync comment
+### Example 1: user-facing literal duplicated with a sync comment
 
 - `sites_affected = 2` (placeholder + renderer fallback)
 - `drift_hazard_severity = 3` (active sync-comment, textbook drift hazard)
-- `effort = 1` (promote to class const)
+- `effort = 1` (promote to a shared constant)
 - `leverage = (2 × 3) / 1 = 6`
 - **Tier 1** — high drift, trivial fix
 
-### Example 2: Hoist `*_pair()` static methods
+### Example 2: hoist duplicated private static methods
 
-- `sites_affected = 9` (3 widgets × 3 helpers, verbatim duplicates)
-- `drift_hazard_severity = 2` (one already drifted between card and wrapper)
-- `effort = 1` (move to helpers.php, repoint callers)
+- `sites_affected = 9` (3 components × 3 helpers, verbatim duplicates)
+- `drift_hazard_severity = 2` (one copy already drifted from the others)
+- `effort = 1` (move to a shared module, repoint callers)
 - `leverage = (9 × 2) / 1 = 18`
 - **Tier 1** — highest leverage in this class
 
-### Example 3: Schema-driven Twig data-shape contracts
+### Example 3: schema-driven template data-shape contracts
 
-- `sites_affected = 1` widget with full PHP↔Twig double-walker
+- `sites_affected = 1` component with a full backend↔template double-walker
 - `drift_hazard_severity = 2` (silent breakage if shape evolves)
-- `effort = 4` (requires PHPStan investment + typed shape contracts)
+- `effort = 4` (requires static-analysis investment + typed shape contracts)
 - `leverage = (1 × 2) / 4 = 0.5`
 - **Tier 4** — defer to a dedicated planning workflow
 
-### Example 4: `EF_Voxel_Templates` constants
+### Example 4: template-name constants
 
 - `sites_affected = 11` template strings across 8 files
-- `drift_hazard_severity = 2` (Voxel renames have happened — migration 410)
+- `drift_hazard_severity = 2` (upstream renames have broken these before)
 - `effort = 1` (1 new file, mechanical replace)
 - `leverage = (11 × 2) / 1 = 22`
 - **Tier 1** — minutes of effort, high future-proofing
 
-### Example 5: Adopt unused `ef_vx_*_pair()` helpers
+### Example 5: adopt existing but unused shared helpers
 
-- `sites_affected = 30+` scalar fields across 9 widgets
+- `sites_affected = 30+` scalar fields across 9 components
 - `drift_hazard_severity = 1` (helper exists, just not used — boilerplate not bug)
 - `effort = 2` (mechanical refactor across many files)
 - `leverage = (30 × 1) / 2 = 15`
