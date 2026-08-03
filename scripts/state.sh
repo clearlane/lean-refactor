@@ -1,6 +1,6 @@
 #!/bin/bash
 
-readonly LEAN_STATE_SCHEMA_VERSION=8
+readonly LEAN_STATE_SCHEMA_VERSION=9
 readonly LEAN_STATE_PREFIX="lean-refactor."
 readonly LEAN_STATE_SUFFIX=".local.md"
 # Host-owned state directory name, relative to the resolved root. Hosts that do
@@ -11,7 +11,7 @@ LEAN_STATE_DIRNAME="${LEAN_REFACTOR_STATE_DIR:-.claude}"
   exit 1
 }
 readonly LEAN_STATE_DIRNAME
-readonly LEAN_STATE_FIELDS="schema_version session_id phase iteration max_iterations tier_floor mode root_path scope_path baseline_commit audit_file audit_hash approval_status approval_digest approval_recorded_at approver approval_conditions approved_findings approved_tier approval_exclusions repository_fingerprint baseline_result_artifact baseline_result_hash reference_inventory_artifact reference_inventory_hash evidence_artifact evidence_hash classification_artifact classification_hash boundary_diff_artifact boundary_diff_hash state_impact_artifact state_impact_hash external_impact_artifact external_impact_hash discovery_ledger discovery_ledger_hash boundary_ledger boundary_ledger_hash current_signature previous_signature expected_wave_manifest expected_wave_manifest_hash expected_wave_status failure_count failure_limit last_failure"
+readonly LEAN_STATE_FIELDS="schema_version session_id phase iteration max_iterations tier_floor mode depth root_path scope_path baseline_commit audit_file audit_hash approval_status approval_digest approval_recorded_at approver approval_conditions approved_findings approved_tier approval_exclusions repository_fingerprint baseline_result_artifact baseline_result_hash reference_inventory_artifact reference_inventory_hash evidence_artifact evidence_hash classification_artifact classification_hash boundary_diff_artifact boundary_diff_hash state_impact_artifact state_impact_hash external_impact_artifact external_impact_hash discovery_ledger discovery_ledger_hash boundary_ledger boundary_ledger_hash current_signature previous_signature expected_wave_manifest expected_wave_manifest_hash expected_wave_status failure_count failure_limit last_failure"
 readonly LEAN_OPTIONAL_FIELDS="audit_file audit_hash approval_digest approval_recorded_at approver approval_conditions approved_findings approved_tier approval_exclusions repository_fingerprint baseline_result_artifact baseline_result_hash reference_inventory_artifact reference_inventory_hash evidence_artifact evidence_hash classification_artifact classification_hash boundary_diff_artifact boundary_diff_hash state_impact_artifact state_impact_hash external_impact_artifact external_impact_hash current_signature previous_signature expected_wave_manifest expected_wave_manifest_hash expected_wave_status last_failure"
 LEAN_STATE_LOCK=""
 LEAN_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -106,7 +106,7 @@ sha256_file() {
 canonical_digest() { printf '%s\0' "$@" | sha256_stream; }
 
 write_state() {
-  local file="$1" session_id="$2" max_iterations="$3" tier_floor="$4" mode="$5" root="$6" scope="$7" baseline="$8" tmp ledger discovery
+  local file="$1" session_id="$2" max_iterations="$3" tier_floor="$4" mode="$5" root="$6" scope="$7" baseline="$8" depth="$9" tmp ledger discovery
   ledger="${file%.local.md}.boundaries.json"
   discovery="${file%.local.md}.discovery.json"
   printf '{"schema_version":2,"session_id":"%s","boundaries":{}}\n' "$session_id" >"$ledger"
@@ -121,6 +121,7 @@ iteration: "1"
 max_iterations: "$max_iterations"
 tier_floor: "$tier_floor"
 mode: "$mode"
+depth: "$depth"
 root_path: "$root"
 scope_path: "$scope"
 baseline_commit: "$baseline"
@@ -181,8 +182,13 @@ validate_state() {
   [[ "$(parse_field "$file" iteration)" =~ ^[1-9][0-9]*$ && "$(parse_field "$file" max_iterations)" =~ ^[1-9][0-9]*$ ]] || return 1
   [[ "$(parse_field "$file" tier_floor)" =~ ^[1-4]$ && "$(parse_field "$file" failure_count)" =~ ^[0-9]+$ && "$(parse_field "$file" failure_limit)" =~ ^[1-9][0-9]*$ ]] || return 1
   [[ "$(parse_field "$file" failure_limit)" == 2 ]] || return 1
-  [[ "$(parse_field "$file" phase)" =~ ^(discovery|prior_art|layer_scans|synthesis|audit_ready|approved|repair|verification|rediscovery|blocked)$ ]] || return 1
+  [[ "$(parse_field "$file" phase)" =~ ^(discovery|prior_art|layer_scans|synthesis|audit_ready|reported|approved|repair|verification|rediscovery|blocked)$ ]] || return 1
   [[ "$(parse_field "$file" mode)" =~ ^(git|code-only)$ && "$(parse_field "$file" approval_status)" =~ ^(pending|approved|revoked)$ ]] || return 1
+  # Depth selects where the workflow terminates; mode selects the isolation
+  # backing. They are independent, so every combination is legal.
+  [[ "$(parse_field "$file" depth)" =~ ^(review|refactor)$ ]] || return 1
+  # A review run stops at findings, so it must never carry approval state.
+  [[ "$(parse_field "$file" depth)" != review || "$(parse_field "$file" approval_status)" == pending ]] || return 1
   root=$(parse_field "$file" root_path)
   scope=$(parse_field "$file" scope_path)
   [[ "$root" == /* && -d "$root" && "$scope" == /* && -d "$scope" ]] || return 1

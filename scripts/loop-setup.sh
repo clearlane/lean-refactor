@@ -14,8 +14,17 @@ scope=""
 max_iterations=10
 tier_floor=2
 mode="git"
+depth="refactor"
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --depth)
+      [[ "${2:-}" =~ ^(review|refactor)$ ]] || {
+        echo "Error: --depth must be review or refactor" >&2
+        exit 1
+      }
+      depth="$2"
+      shift 2
+      ;;
     --max-iterations)
       [[ "${2:-}" =~ ^[1-9][0-9]*$ ]] || {
         echo "Error: --max-iterations requires positive integer" >&2
@@ -87,10 +96,10 @@ valid_session_id "$session_id" || {
 dir=$(state_dir "$root")
 file=$(state_path "$root" "$session_id")
 mkdir -p "$dir"
-write_state "$file" "$session_id" "$max_iterations" "$tier_floor" "$mode" "$root" "$scope" "$baseline"
+write_state "$file" "$session_id" "$max_iterations" "$tier_floor" "$mode" "$root" "$scope" "$baseline" "$depth"
 validate_state "$file" || {
   echo "Error: Written state failed validation: $file" >&2
   exit 1
 }
 
-printf 'Session ID: %s\nRoot: %s\nScope: %s\nMode: %s\nState: %s\n' "$session_id" "$root" "$scope" "$mode" "$file"
+printf 'Session ID: %s\nRoot: %s\nScope: %s\nMode: %s\nDepth: %s\nState: %s\n' "$session_id" "$root" "$scope" "$mode" "$depth" "$file"
