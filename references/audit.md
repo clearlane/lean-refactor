@@ -12,7 +12,7 @@ date: YYYY-MM-DD
 scope: <plugins/foo or whole-repo>
 command: /lean-refactor <scope>
 status: pending-approval | in-progress | partial | complete | deferred
-execution_mode: read-only-discovery | mutating
+depth: review | refactor
 repository_mode: git-backed | non-git-code-only
 persistence: durable:<path> | blocked:<reason>
 baseline_fingerprint: <HEAD/tree or snapshot hashes>
@@ -33,14 +33,24 @@ agents_dispatched:
 - High-drift hazards (≥2): Z
 - Latent bugs surfaced: W
 - Evidence: confirmed N | suspected N | blocked N
+- Severity: P0 N | P1 N | P2 N | P3 N
 - Excluded security controls: N
 - State-bound findings: N
 
-## Read-only disposition
+## Coverage gaps
 
-- Inline audit complete: yes | n/a
-- Persistence: blocked `<reason>` | durable `<path>`
-- Approval/repair prohibited: yes | n/a
+A reader must be able to see the shape of what was not examined. This section is never omitted; when nothing was blocked, say so explicitly.
+
+- Blocked lenses: `<lens — why it could not run>` | none
+- Withheld claims: `<suspected/blocked finding IDs and the evidence each still needs>` | none
+- Unqueryable stores or surfaces: `<what, and what stopped the inspection>` | none
+
+## Depth disposition
+
+- Depth: review | refactor
+- Severity floor published: `<P0–P3>` | n/a
+- Report path/hash: `<path>` / `<SHA-256>` | n/a
+- Approval/repair prohibited: yes (review) | no (refactor)
 
 ## Approval record
 
@@ -90,10 +100,12 @@ agents_dispatched:
 **Proposed SSOT**: <where it should live + form (function / class / constant / utility)>
 
 **Score justification**:
+- **Severity**: `<P0–P3>` — `<impact rationale, independent of effort>`
 - **Sites affected**: `<K>` — `<literal-count rationale>`
 - **Effort**: `<1–4>` — `<estimate rationale>`
 - **Drift hazard**: `<0–3>` — `<evidence rationale>`
-- **Leverage/tier**: `<K × H / E; tier>` — `<threshold rationale>`
+- **Leverage/tier**: `<K × H / E; tier>` — `<threshold rationale, or untiered because not compound>`
+- **Corroborating lenses**: `<every lens that independently observed this defect>`
 
 **Notes**: <caveats>
 
@@ -218,6 +230,8 @@ sorted sets mean no progress — emit `<lean-refactor-stuck>`.
 
 ## Tips
 
+- **Title the defect, not the activity** — `Orphaned script has no inbound reference` tells the reader what is wrong; `Reviewed the scripts directory` does not. Two lenses observing one defect must produce titles close enough to merge, so name the defect and its location rather than the route taken to it.
+- **Score severity and leverage on every finding** — they answer different questions and a run needs both. A single-site `P0` is untiered and still leads the report.
 - **Status field per finding** — keep the audit file in sync as repair agents land. Mark `resolved by <hash>` so the audit becomes a permanent index from "drift surface" to "commit that closed it".
 - **Legacy-path disposition per finding** — record complete removal by default. Include the temporary compatibility exception block only after explicit approval, with all four temporary-compatibility fields required by the Safety and Evidence Invariants and its ADR/task added in the same diff.
 - **Leverage column in tables** — surfaces the formula at a glance for the user during the approval gate.
