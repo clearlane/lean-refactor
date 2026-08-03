@@ -40,6 +40,12 @@ validate_state "$state" || {
   echo "Error: state changed before approval lock was acquired" >&2
   exit 1
 }
+# Depth is the terminal boundary: a review run may never acquire approval, so
+# the repair machinery downstream of it stays unreachable by construction.
+[[ "$(parse_field "$state" depth)" == refactor ]] || {
+  echo "Error: approval requires a depth=refactor run; a review run terminates at its report." >&2
+  exit 1
+}
 [[ "$(parse_field "$state" phase)" == audit_ready ]] || {
   echo "Error: approval requires completed prior-art, layer-scan, synthesis, and audit checkpoints" >&2
   exit 1

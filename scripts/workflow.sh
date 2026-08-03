@@ -7,8 +7,9 @@ usage() {
 Usage: workflow.sh <command> [arguments]
 
 Commands:
-  init [SCOPE] [--max-iterations N] [--tier-floor N] [--code-only]
+  init [SCOPE] [--depth review|refactor] [--max-iterations N] [--tier-floor N] [--code-only]
   discovery <STATE> --stage prior-art|layers|synthesis|audit --artifact FILE
+  report <STATE> <AUDIT> <review-report options>
   approve <STATE> <AUDIT> <record-approval options>
   verify-approval <STATE>
   boundary <STATE> <record-boundary-result options>
@@ -29,6 +30,7 @@ shift
 case "$command_name" in
   init) exec "$SCRIPT_DIR/loop-setup.sh" "$@" ;;
   discovery) exec "$SCRIPT_DIR/discovery-record.sh" "$@" ;;
+  report) exec "$SCRIPT_DIR/review-report.sh" "$@" ;;
   approve) exec "$SCRIPT_DIR/approval-record.sh" "$@" ;;
   verify-approval) exec "$SCRIPT_DIR/approval-verify.sh" "$@" ;;
   boundary) exec "$SCRIPT_DIR/boundary-record.sh" "$@" ;;
@@ -45,8 +47,9 @@ case "$command_name" in
       echo "Error: invalid state: $1" >&2
       exit 1
     }
-    printf 'session_id=%s\nphase=%s\niteration=%s\napproval_status=%s\nstate=%s\nboundary_ledger=%s\n' \
+    printf 'session_id=%s\nphase=%s\ndepth=%s\niteration=%s\napproval_status=%s\nstate=%s\nboundary_ledger=%s\n' \
       "$(parse_field "$1" session_id)" "$(parse_field "$1" phase)" \
+      "$(parse_field "$1" depth)" \
       "$(parse_field "$1" iteration)" "$(parse_field "$1" approval_status)" \
       "$1" "$(parse_field "$1" boundary_ledger)"
     ;;
