@@ -2,9 +2,35 @@
 
 Scoring detail for confirmed findings under canonical workflow in `../SKILL.md`. Rubric ranks work; it never grants approval or overrides repair stop conditions.
 
+Every finding carries two independent scores, and one run uses both:
+
+| Score | Question it answers | Ranks |
+|---|---|---|
+| `severity` | How much does this defect matter? | The review report at `--depth review` |
+| `leverage` | How much drift does one consolidation remove? | Tiering and repair order at `--depth refactor` |
+
+Score both on every confirmed finding regardless of depth. They disagree by design: a single-site defect that breaks a stated guarantee is `P0` and simultaneously untiered, because it is urgent but not compound. Recording only leverage would delete it from the run; recording only severity would give a compound cleanup the same weight as a broken invariant.
+
 ## Eligibility
 
-Score only `evidence_state: confirmed` findings with complete reference surfaces and proven semantic equivalence. Keep `suspected` and `blocked` candidates in audit evidence appendix, unranked.
+Score only `evidence_state: confirmed` findings with complete reference surfaces and proven semantic equivalence. Keep `suspected` and `blocked` candidates in the audit evidence appendix, unranked, and list them under coverage gaps.
+
+## Severity
+
+Severity is impact, never effort. Assign it from the consequence of leaving the defect in place.
+
+| Tier | Meaning | Typical evidence |
+|---|---|---|
+| `P0` | Breaks correctness, safety, or an explicitly stated guarantee | An invariant the code claims but does not hold; a reachable unvalidated input; an untested path that fails closed |
+| `P1` | Real risk or active maintenance drift | One rule with several owners that already disagree; a check that cannot fail; coverage that misses the stated contract |
+| `P2` | Worth fixing, no active harm | Dead scaffolding, stale references, inconsistent naming with a real cost |
+| `P3` | Cosmetic | Wording, formatting, preference without consequence |
+
+A one-line fix for a broken guarantee is `P0`; a week-long cleanup with no consequence is `P3`. Effort belongs in `effort`, which feeds leverage, not in severity.
+
+Do not inflate a tier to attract attention. A report where every finding is `P0` tells the reader nothing about what to do first.
+
+A review publishes confirmed findings at or above its severity floor, defaulting to `P2`, ordered by severity. Findings below the floor stay in the audit long tail rather than disappearing.
 
 ## Formula
 
@@ -12,7 +38,7 @@ Score only `evidence_state: confirmed` findings with complete reference surfaces
 leverage = (sites_affected × drift_hazard_severity) / effort
 ```
 
-Then bucket into tiers.
+Then bucket into tiers. Leverage measures compound value, so it deliberately discounts a defect confined to one site. That is correct for choosing consolidation work and wrong for choosing what to report, which is why severity is scored alongside it.
 
 ## Component Definitions
 
@@ -61,6 +87,8 @@ Buckets are mutually exclusive — `effort` alone decides which tier a finding c
 - **Tier 4** — `effort = 4` (defer to a dedicated planning workflow)
 
 A finding below its tier's leverage threshold with `drift_hazard < 3` is not tiered — it goes to the audit file's long tail.
+
+Untiered is not unreported. A `P0` or `P1` finding that never qualifies for a tier still leads the review report and still appears in the audit; it simply is not compound repair work. Never raise `sites_affected` or `drift_hazard_severity` to force a serious defect into a tier — report it by severity instead.
 
 `drift_hazard = 3` never moves a finding into a lower-effort tier. Tier 1 is the auto-approvable bucket, so promoting nontrivial work into it would auto-approve work the user never sized. An active-drift finding stays in its effort-appropriate tier and is flagged prominently in the approval summary (lead with it, label it `ACTIVE DRIFT`) so the user can pull it forward deliberately.
 
@@ -117,23 +145,25 @@ A finding below its tier's leverage threshold with `drift_hazard < 3` is not tie
 
 ## Output Format
 
-Master list groups by tier, then by domain within tier. Each finding:
+A refactor run groups the master list by tier, then by domain within tier. A review run groups it by severity. Both render the same finding fields, so one audit serves either depth:
 
 ```
-### [Tier 1] Title (imperative)
+### [P1] [Tier 1] Title — name the defect and where it lives
 - **Files**: path:line, path:line, ...
 - **Current**: <what's scattered, with code excerpt if <8 lines>
 - **Proposed SSOT**: <where the consolidation lives>
+- **Severity**: P0–P3 — <impact justification, independent of effort>
 - **Sites affected**: N — <literal-count justification>
 - **Drift hazard**: 0–3 — <evidence justification>
 - **Effort**: 1–4 — <estimate justification>
-- **Leverage/tier**: <calculation> — <threshold justification>
+- **Leverage/tier**: <calculation> — <threshold justification, or "untiered — not compound">
+- **Corroborating lenses**: <every lens that independently observed this defect>
 - **Evidence state**: confirmed
 - **Search provenance**: <query/root/filters/count>
 - **Semantic equivalence**: <why behavior and contracts match>
 ```
 
-No cap on findings. Every finding, at every tier, lands in the audit file — the audit file is the exhaustive record. Only the user-facing summary may abbreviate, showing the top N per tier by leverage with a count of the remainder ("Tier 2: showing 10 of 34").
+No cap on findings. Every finding, at every tier and every severity, lands in the audit file — the audit file is the exhaustive record. Only the user-facing summary may abbreviate, showing the top N per group with a count of the remainder ("Tier 2: showing 10 of 34").
 
 ## Anti-Pattern: LOC-Only Ranking
 
