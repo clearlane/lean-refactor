@@ -26,3 +26,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
+
+# Generated agent skill directories (see skills-lock.json)
+agent/
+.claude/skills/
