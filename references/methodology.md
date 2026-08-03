@@ -4,7 +4,7 @@ Detailed execution guide. Safety and evidence invariants live in `../SKILL.md`; 
 
 ## 1. Frame and establish evidence
 
-Resolve execution mode separately from backing. Read-only discovery returns complete inline audit, records persistence blocked, and stops before approval/repair. Mutating Git mode requires clean tree before state creation; mutating code-only mode records unavailable Git guarantees. Load recent audits and solutions as prior art where readable.
+Resolve depth separately from backing; they are orthogonal axes and either depth is legal under either backing. Depth decides where the run terminates, backing decides what isolation guarantees mutation has. A `review` run persists its audit like any other run and terminates at `workflow.sh report`, before approval and repair; the coordinator refuses approval for it rather than relying on the operator to stop. Git backing requires a clean tree before state creation; code-only backing records unavailable Git guarantees. Load recent audits and solutions as prior art where readable.
 
 Example scope map:
 

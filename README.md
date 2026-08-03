@@ -1,8 +1,15 @@
 # lean-refactor
 
-`lean-refactor` finds and fixes compound Single Source of Truth (SSOT) and Don't Repeat Yourself (DRY) violations. It targets consolidations where one canonical change removes drift across multiple files, call sites, modules, schemas, tests, or operational surfaces.
+`lean-refactor` reviews a repository and fixes what it finds. One evidence-gated workflow runs at two depths:
 
-Don't use it for single-file cleanup, one-function bug fixes, new features, or cleanup limited to recent changes.
+- `--depth review` — read-only. Discovers, ranks by severity, publishes one report with an explicit coverage-gaps section, and terminates. It can never acquire approval.
+- `--depth refactor` — the default. Continues past the report into approved, isolated repair of compound Single Source of Truth (SSOT) and Don't Repeat Yourself (DRY) violations, where one canonical change removes drift across multiple files, call sites, modules, schemas, tests, or operational surfaces.
+
+Both depths share the same discovery spine — frame, prior art, parallel lenses, synthesis, audit — and diverge only after the audit is ready. Depth is orthogonal to backing (`--code-only`): depth decides where the run stops, backing decides what isolation guarantees mutation has.
+
+Every confirmed finding carries two scores. `severity` (P0–P3) is impact and ranks the review; `leverage` (sites × drift / effort) is compound value and tiers the repair. A single-site defect that breaks a stated guarantee is `P0` and untiered — it leads the report without becoming compound repair work.
+
+Don't use it for single-file review or cleanup, diff-only review, one-function bug fixes, new features, or cleanup limited to recent changes.
 
 ## Prerequisites
 
@@ -37,16 +44,16 @@ Restart or reload the agent so it discovers `SKILL.md`.
 Invoke with a repository or scoped directory:
 
 ```text
-/lean-refactor [SCOPE] [--max-iterations N] [--tier-floor 1|2|3|4] [--code-only]
+/lean-refactor [SCOPE] [--depth review|refactor] [--max-iterations N] [--tier-floor 1|2|3|4] [--code-only]
 ```
 
 For iterative runs, use the coordinator entrypoint:
 
 ```sh
-scripts/workflow.sh init [SCOPE] [--max-iterations N] [--tier-floor 1|2|3|4] [--code-only]
+scripts/workflow.sh init [SCOPE] [--depth review|refactor] [--max-iterations N] [--tier-floor 1|2|3|4] [--code-only]
 ```
 
-The coordinator writes local state, a discovery-checkpoint ledger, and a per-boundary ledger. Use its `discovery`, `approve`, `verify-approval`, `boundary`, `finalize`, `conclude-discovery`, `status`, and `cancel` commands for transitions. `conclude-discovery` is the zero-findings convergence path. Initialization doesn't register the continuation adapter; when the host supports stop hooks, register the absolute path to `scripts/event-stop.sh` and pass its documented JSON input. Without that adapter, runs are single-turn and must not claim automatic continuation.
+The coordinator writes local state, a discovery-checkpoint ledger, and a per-boundary ledger. Use its `discovery`, `report`, `approve`, `verify-approval`, `boundary`, `finalize`, `conclude-discovery`, `status`, and `cancel` commands for transitions. `report` is the review terminal and moves the run to `reported`; `conclude-discovery` is the zero-findings convergence path for a refactor run. Initialization doesn't register the continuation adapter; when the host supports stop hooks, register the absolute path to `scripts/event-stop.sh` and pass its documented JSON input. Without that adapter, runs are single-turn and must not claim automatic continuation.
 
 Before layer discovery, create a compact deterministic repository frame:
 
