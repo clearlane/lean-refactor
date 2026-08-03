@@ -101,3 +101,5 @@ Emit `<lean-refactor-complete>` only after `workflow.sh conclude-discovery` reco
 Before handoff, run the target repository's native checks. When this skill's own files changed, run `scripts/check.sh`; it owns the complete check list, so no caller restates the individual commands.
 
 Name every resource you add or rename with one lowercase word, or a family-first lowercase hyphenated stem when one word is ambiguous. Put the stable family first (`loop-setup.sh`, not `setup-loop.sh`) so siblings sort together, and avoid generic segments such as `helper`, `utils`, or `new`. `scripts/names.sh` enforces this and preserves names fixed by an external contract.
+
+When absorbing a skill into this one, record its provenance as one file under [references/upstream/](references/upstream/README.md): baseline digest, absorption date, bound plan hash, absorbed capabilities, deliberate exclusions, and canonical destinations. One file per source, so provenance scales by adding a file rather than by editing a shared registry.

@@ -71,6 +71,11 @@ Skill packaging conventions draw on the `plugin-structure` skill from
 [anthropics/claude-code](https://github.com/anthropics/claude-code). No upstream
 file is vendored into this repository, so there is nothing to pin or hash-verify.
 
+Skills absorbed into this one are recorded individually under
+[`references/upstream/`](references/upstream/README.md), one file per source,
+each with its baseline digest, absorption date, bound plan hash, absorbed
+capabilities, and deliberate exclusions.
+
 ## Safety
 
 The skill requires a trusted checkout and explicit scope. It checks repository state, records evidence, gates repairs on approval, isolates work where needed, and verifies each repair before proceeding. Review target root, scope, proposed deletions, migrations, and public API cuts before approval. Scripts don't require `sudo`.
